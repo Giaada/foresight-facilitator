@@ -143,40 +143,58 @@ with col_chat:
 
 # ── Pannello scenario in costruzione ─────────────────────
 with col_panel:
-    with st.expander("📝 Scenario in costruzione", expanded=True):
-        sc_aggiornato = get_scenario(sc["id"])
+    @st.fragment(run_every=5)
+    def _pannello_scenario():
+        sc_live = get_scenario(sc["id"])
+        if not sc_live:
+            return
 
-        if sc_aggiornato.get("titolo"):
-            st.markdown(f"### {sc_aggiornato['titolo']}")
-        else:
-            st.caption("*Titolo non ancora definito*")
+        STEP_LABEL = {
+            "intro": "🟡 Introduzione",
+            "key_points": "🔵 Key Points",
+            "narrativa": "🟣 Narrativa",
+            "titolo": "🟠 Titolo",
+            "minacce": "🔴 Minacce",
+            "opportunita": "🟢 Opportunità",
+            "concluso": "✅ Concluso",
+        }
+        step_label = STEP_LABEL.get(sc_live["step_corrente"], sc_live["step_corrente"])
+        st.caption(f"Step: {step_label}")
 
-        if sc_aggiornato.get("narrativa"):
-            with st.container(border=True):
-                st.markdown("**Narrativa**")
-                st.markdown(sc_aggiornato["narrativa"])
+        with st.expander("📝 Scenario in costruzione", expanded=True):
+            if sc_live.get("titolo"):
+                st.markdown(f"### {sc_live['titolo']}")
+            else:
+                st.caption("*Titolo non ancora definito*")
 
-        if sc_aggiornato.get("minacce"):
-            with st.container(border=True):
-                st.markdown("**⚠️ Minacce**")
-                for m in sc_aggiornato["minacce"]:
-                    st.markdown(f"- {m}")
+            if sc_live.get("narrativa"):
+                with st.container(border=True):
+                    st.markdown("**Narrativa**")
+                    st.markdown(sc_live["narrativa"])
 
-        if sc_aggiornato.get("opportunita"):
-            with st.container(border=True):
-                st.markdown("**✨ Opportunità**")
-                for o in sc_aggiornato["opportunita"]:
-                    st.markdown(f"- {o}")
+            if sc_live.get("minacce"):
+                with st.container(border=True):
+                    st.markdown("**⚠️ Minacce**")
+                    for m in sc_live["minacce"]:
+                        st.markdown(f"- {m}")
 
-        if sc_aggiornato.get("key_points_data"):
-            st.markdown("**Key Points esplorati:**")
-            for kp, risposta in sc_aggiornato["key_points_data"].items():
-                st.markdown(f"- **{kp}:** {risposta}")
+            if sc_live.get("opportunita"):
+                with st.container(border=True):
+                    st.markdown("**✨ Opportunità**")
+                    for o in sc_live["opportunita"]:
+                        st.markdown(f"- {o}")
 
-        if not any([
-            sc_aggiornato.get("titolo"),
-            sc_aggiornato.get("narrativa"),
-            sc_aggiornato.get("minacce"),
-            sc_aggiornato.get("opportunita"),
-        ]):
-            st.info("Lo scenario si costruirà durante la conversazione con l'agente.")
+            if sc_live.get("key_points_data"):
+                st.markdown("**Key Points esplorati:**")
+                for kp, risposta in sc_live["key_points_data"].items():
+                    st.markdown(f"- **{kp}:** {risposta}")
+
+            if not any([
+                sc_live.get("titolo"),
+                sc_live.get("narrativa"),
+                sc_live.get("minacce"),
+                sc_live.get("opportunita"),
+            ]):
+                st.info("Lo scenario si costruirà durante la conversazione con l'agente.")
+
+    _pannello_scenario()

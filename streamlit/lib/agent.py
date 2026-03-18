@@ -51,10 +51,10 @@ STEP CORRENTE: {step}
 FLUSSO DA SEGUIRE:
 1. intro → presenta il quadrante, invita a iniziare
 2. key_points → esplora ogni key point uno alla volta con domande mirate
-3. narrativa → sintetizza una descrizione narrativa coerente e stimolante
+3. narrativa → sintetizza una descrizione narrativa coerente (3-5 frasi)
 4. titolo → chiedi un titolo; se non fornito, suggerisci 3 opzioni
-5. minacce → guida l'identificazione delle principali minacce di questo scenario
-6. opportunita → guida l'identificazione delle opportunità
+5. minacce → guida l'identificazione delle principali minacce (lista)
+6. opportunita → guida l'identificazione delle opportunità (lista)
 7. concluso → riepilogo e chiusura
 
 ISTRUZIONI:
@@ -63,19 +63,25 @@ ISTRUZIONI:
 - Quando hai abbastanza materiale per uno step, avanza al successivo
 - Sii specifico rispetto all'orizzonte temporale {sessione['frame_temporale']}
 
-RISPOSTA in JSON:
+REGOLE PER aggiornamenti (FONDAMENTALE - segui sempre):
+- Step narrativa: quando generi la narrativa, METTI SEMPRE il testo in aggiornamenti.narrativa
+- Step titolo: quando il titolo è confermato o scelto, METTI SEMPRE in aggiornamenti.titolo
+- Step minacce: ogni volta che hai una lista di minacce, METTI SEMPRE in aggiornamenti.minacce
+- Step opportunita: ogni volta che hai una lista di opportunità, METTI SEMPRE in aggiornamenti.opportunita
+- Step key_points: salva le risposte ricevute in aggiornamenti.key_points_data
+
+RISPOSTA - rispondi SOLO con questo JSON, senza testo prima o dopo:
 {{
-  "testo": "messaggio da mostrare al facilitatore",
-  "nuovo_step": "nome step se stai avanzando, altrimenti null",
+  "testo": "messaggio da mostrare ai partecipanti",
+  "nuovo_step": "nome del prossimo step se stai avanzando, altrimenti null",
   "aggiornamenti": {{
-    "narrativa": "testo se generata/aggiornata, altrimenti null",
+    "narrativa": "testo narrativa se disponibile, altrimenti null",
     "titolo": "titolo se confermato, altrimenti null",
-    "minacce": ["lista", "se", "aggiornata"],
-    "opportunita": ["lista", "se", "aggiornata"],
-    "key_points_data": {{"chiave": "valore se aggiornato"}}
+    "minacce": ["minaccia 1", "minaccia 2"],
+    "opportunita": ["opportunità 1", "opportunità 2"],
+    "key_points_data": {{"nome_key_point": "risposta ricevuta"}}
   }}
-}}
-Se aggiornamenti non ha campi, metti null."""
+}}"""
 
 
 def _build_history(messaggi_db, testo_utente):
@@ -112,22 +118,26 @@ def invia_messaggio(scenario, sessione, testo_utente):
         )
         testo_raw = risposta.content[0].text
 
-        # Prova a parsare JSON
+        # Prova a parsare JSON — gestisce blocchi ```json...``` e testo extra
+        testo_risposta = testo_raw
+        nuovo_step = None
+        agg = {}
         try:
-            m = re.search(r'\{[\s\S]*\}', testo_raw)
-            if m:
-                parsed = json.loads(m.group())
-                testo_risposta = parsed.get("testo", testo_raw)
+            # Rimuovi eventuale blocco markdown ```json ... ```
+            cleaned = re.sub(r'^```(?:json)?\s*', '', testo_raw.strip(), flags=re.MULTILINE)
+            cleaned = re.sub(r'```\s*$', '', cleaned.strip(), flags=re.MULTILINE)
+            # Cerca il primo oggetto JSON completo (non greedy non funziona su oggetti annidati,
+            # usiamo json.JSONDecoder.raw_decode che si ferma al termine del primo oggetto valido)
+            decoder = json.JSONDecoder()
+            idx = cleaned.find('{')
+            if idx != -1:
+                parsed, _ = decoder.raw_decode(cleaned, idx)
+                testo_risposta = parsed.get("testo") or testo_raw
                 nuovo_step = parsed.get("nuovo_step")
                 agg = parsed.get("aggiornamenti") or {}
-            else:
-                testo_risposta = testo_raw
-                nuovo_step = None
-                agg = {}
         except Exception:
+            # Fallback: usa il testo grezzo come risposta
             testo_risposta = testo_raw
-            nuovo_step = None
-            agg = {}
 
         # Salva messaggi
         aggiungi_messaggio(scenario["id"], "user", testo_utente)

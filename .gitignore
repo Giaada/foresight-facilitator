@@ -47,3 +47,7 @@ next-env.d.ts
 /app/generated/prisma
 /prisma/dev.db
 /prisma/dev.db-journal
+
+# streamlit
+streamlit/.streamlit/secrets.toml
+streamlit/foresight.db

@@ -5,8 +5,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from lib.database import get_sessione, get_scenari, get_scenario, aggiorna_scenario, get_messaggi
 from lib.agent import invia_messaggio, avvia_scenario
+from lib.auth import check_auth
 
 st.set_page_config(page_title="Scenario Planning · Foresight Facilitator", page_icon="🗺️", layout="wide")
+check_auth()
 
 if "sessione_id" not in st.session_state:
     st.warning("Nessuna sessione selezionata.")

@@ -7,6 +7,7 @@ from lib.database import (
     get_sessione, aggiorna_sessione, get_fenomeni,
     aggiungi_fenomeno, elimina_fenomeno, aggiorna_priorita_fenomeni
 )
+from lib.auth import check_auth
 
 try:
     from streamlit_sortables import sort_items
@@ -15,6 +16,7 @@ except ImportError:
     SORTABLE = False
 
 st.set_page_config(page_title="Horizon Scanning · Foresight Facilitator", page_icon="🔭", layout="wide")
+check_auth()
 
 if "sessione_id" not in st.session_state:
     st.warning("Nessuna sessione selezionata.")
@@ -63,7 +65,6 @@ with col1:
                     if f.get("descrizione"):
                         st.caption(f["descrizione"])
     else:
-        # Fallback senza drag: numeri di priorità
         st.info("💡 Installa `streamlit-sortables` per il drag & drop. Usa i numeri per prioritizzare.")
         nuovi_ordini = {}
         for f in fenomeni:
@@ -80,31 +81,39 @@ with col1:
             st.success("Ordine salvato!")
             st.rerun()
 
-# ── Gestione fenomeni ────────────────────────────────────
+# ── Aggiungi fenomeno (solo aggiunta, nessuna eliminazione) ──
 with col2:
     st.subheader("➕ Aggiungi fenomeno")
+    st.caption("I partecipanti possono proporre nuovi fenomeni. Non è possibile eliminare quelli esistenti.")
+
     with st.form("nuovo_fenomeno_hs", clear_on_submit=True):
         testo = st.text_input("Fenomeno / trend", placeholder="Scrivi il fenomeno...")
         descr = st.text_input("Descrizione (opzionale)")
-        if st.form_submit_button("Aggiungi", use_container_width=True):
+        if st.form_submit_button("Aggiungi", use_container_width=True, type="primary"):
             if testo.strip():
                 aggiungi_fenomeno(sid, testo.strip(), descr.strip())
                 st.rerun()
+            else:
+                st.warning("Inserisci il testo del fenomeno.")
 
     st.divider()
-    st.subheader("🗑️ Rimuovi fenomeni")
-    for f in fenomeni:
-        col_t, col_d = st.columns([4, 1])
-        with col_t:
-            st.markdown(f"*{f['testo']}*")
-        with col_d:
-            if st.button("✕", key=f"rm_{f['id']}"):
-                elimina_fenomeno(f["id"])
-                st.rerun()
+
+    # Elimina fenomeni — solo il facilitatore, sezione separata e collassata
+    with st.expander("🔒 Gestione avanzata (solo facilitatore)"):
+        st.caption("Da qui puoi rimuovere fenomeni errati o duplicati.")
+        fenomeni_aggiornati = get_fenomeni(sid)
+        for f in fenomeni_aggiornati:
+            col_t, col_d = st.columns([4, 1])
+            with col_t:
+                st.markdown(f"*{f['testo']}*")
+            with col_d:
+                if st.button("🗑️", key=f"rm_{f['id']}", help="Elimina"):
+                    elimina_fenomeno(f["id"])
+                    st.rerun()
 
 st.divider()
 
-# ── Riepilogo e avanzamento ───────────────────────────────
+# ── Riepilogo ─────────────────────────────────────────────
 st.subheader("📈 Riepilogo prioritizzazione")
 
 fenomeni_aggiornati = get_fenomeni(sid)

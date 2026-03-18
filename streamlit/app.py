@@ -5,6 +5,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from lib.database import init_db, lista_sessioni, crea_sessione
+from lib.auth import check_auth
 
 st.set_page_config(
     page_title="Foresight Facilitator",
@@ -14,10 +15,12 @@ st.set_page_config(
 )
 
 init_db()
+check_auth()
 
 # ── Sidebar navigazione ───────────────────────────────────
 with st.sidebar:
     st.markdown("## 🧭 Foresight Facilitator")
+    st.caption("Area Facilitatore")
     st.divider()
 
     if "sessione_id" in st.session_state:
@@ -33,6 +36,11 @@ with st.sidebar:
         st.page_link("pages/5_Report.py", label="📄 Report", use_container_width=True)
     else:
         st.info("Nessuna sessione selezionata")
+
+    st.divider()
+    if st.button("🔒 Esci", use_container_width=True):
+        st.session_state.clear()
+        st.rerun()
 
 # ── Home ──────────────────────────────────────────────────
 st.title("🧭 Foresight Facilitator")

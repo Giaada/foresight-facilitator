@@ -4,8 +4,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from lib.database import get_sessione, aggiorna_sessione, get_fenomeni, aggiungi_fenomeno, elimina_fenomeno
+from lib.auth import check_auth
 
 st.set_page_config(page_title="Setup · Foresight Facilitator", page_icon="⚙️", layout="wide")
+check_auth()
 
 if "sessione_id" not in st.session_state:
     st.warning("Nessuna sessione selezionata.")

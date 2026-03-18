@@ -4,120 +4,138 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from lib.database import init_db, lista_sessioni, crea_sessione
-from lib.auth import check_auth
+from lib.database import init_db, get_sessione_by_id, get_sessione_by_codice, registra_partecipante
 
-st.set_page_config(
-    page_title="Foresight Facilitator",
-    page_icon="🧭",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
+st.set_page_config(page_title="Foresight Facilitator", page_icon="🧭", layout="wide")
 init_db()
-check_auth()
 
-# ── Sidebar navigazione ───────────────────────────────────
-with st.sidebar:
-    st.markdown("## 🧭 Foresight Facilitator")
-    st.caption("Area Facilitatore")
-    st.divider()
+ruolo = st.session_state.get("ruolo")  # None | "facilitatore" | "partecipante"
 
-    if "sessione_id" in st.session_state:
-        st.success(f"Sessione attiva: **#{st.session_state.sessione_id}**")
-        if st.button("← Cambia sessione", use_container_width=True):
-            del st.session_state["sessione_id"]
-            st.rerun()
+# ── CSS globale per nascondere sidebar nella home ─────────
+HIDE_SIDEBAR_CSS = """
+<style>
+[data-testid="stSidebarNav"] { display: none; }
+section[data-testid="stSidebar"] { display: none; }
+</style>
+"""
+
+if ruolo == "facilitatore":
+    pages = {
+        "Sessione": [
+            st.Page("pages/fac_setup.py", title="⚙️ Setup", default=True),
+        ],
+        "Facilitazione": [
+            st.Page("pages/fac_hs.py", title="🔭 Horizon Scanning"),
+            st.Page("pages/fac_transizione.py", title="🔀 Transizione"),
+            st.Page("pages/fac_scenario.py", title="🗺️ Scenario Planning"),
+            st.Page("pages/fac_report.py", title="📄 Report"),
+        ],
+    }
+
+    with st.sidebar:
+        if st.session_state.get("sessione_id"):
+            sessione = get_sessione_by_id(st.session_state.sessione_id)
+            if sessione:
+                st.success("Sessione attiva")
+                st.metric("Codice partecipanti", sessione["codice"])
+                if st.button("Cambia sessione"):
+                    del st.session_state["sessione_id"]
+                    st.rerun()
         st.divider()
-        st.page_link("pages/1_Setup.py", label="⚙️ Setup", use_container_width=True)
-        st.page_link("pages/2_Horizon_Scanning.py", label="🔭 Horizon Scanning", use_container_width=True)
-        st.page_link("pages/3_Transizione.py", label="🔀 Transizione", use_container_width=True)
-        st.page_link("pages/4_Scenario_Planning.py", label="🗺️ Scenario Planning", use_container_width=True)
-        st.page_link("pages/5_Report.py", label="📄 Report", use_container_width=True)
-    else:
-        st.info("Nessuna sessione selezionata")
+        if st.button("🔒 Esci"):
+            st.session_state.clear()
+            st.rerun()
 
-    st.divider()
-    if st.button("🔒 Esci", use_container_width=True):
-        st.session_state.clear()
-        st.rerun()
+    pg = st.navigation(pages)
+    pg.run()
 
-# ── Home ──────────────────────────────────────────────────
-st.title("🧭 Foresight Facilitator")
-st.markdown("Strumento di facilitazione per sessioni di **Strategic Foresight** guidate dall'AI.")
-st.divider()
+elif ruolo == "partecipante":
+    pages = {
+        "": [
+            st.Page("pages/par_hs.py", title="🔭 Horizon Scanning", default=True),
+            st.Page("pages/par_scenario.py", title="🗺️ Scenario Planning"),
+        ]
+    }
 
-col1, col2 = st.columns(2)
+    with st.sidebar:
+        p = st.session_state.get("partecipante", {})
+        st.markdown(f"👤 **{p.get('nome', '')}**")
+        sessione = get_sessione_by_id(p.get("sessione_id")) if p.get("sessione_id") else None
+        if sessione:
+            domanda = sessione["domanda_ricerca"]
+            st.caption(f"📌 {domanda[:60]}{'...' if len(domanda) > 60 else ''}")
+            st.caption(f"⏱️ {sessione['frame_temporale']}")
+        if st.button("Esci"):
+            st.session_state.clear()
+            st.rerun()
 
-# Nuova sessione
-with col1:
-    st.subheader("➕ Nuova sessione")
-    with st.form("nuova_sessione"):
-        domanda = st.text_area(
-            "Domanda di ricerca *",
-            placeholder="Es. Come evolverà il sistema sanitario nei prossimi 10 anni?",
-            height=100,
+    pg = st.navigation(pages)
+    pg.run()
+
+else:
+    # HOME: scelta ruolo — niente sidebar, niente navigation reale
+    st.markdown(HIDE_SIDEBAR_CSS, unsafe_allow_html=True)
+
+    def _home():
+        st.markdown(
+            "<h1 style='text-align:center'>🧭 Foresight Facilitator</h1>",
+            unsafe_allow_html=True,
         )
-        frame = st.text_input(
-            "Orizzonte temporale *",
-            placeholder="Es. 2035, prossimi 10 anni, 2030–2040",
+        st.markdown(
+            "<p style='text-align:center;color:#6B7280'>Strumento di facilitazione per sessioni di <strong>Strategic Foresight</strong> guidate dall'AI</p>",
+            unsafe_allow_html=True,
         )
+        st.markdown("<br>", unsafe_allow_html=True)
 
-        st.markdown("**Key Points** per lo Scenario Planning")
-        st.caption("Dimensioni che ogni scenario dovrà esplorare")
-        kp_raw = st.text_area(
-            "Un key point per riga",
-            placeholder="Tecnologia\nLavoro\nGovernance\nAmbiente",
-            height=100,
-            label_visibility="collapsed",
-        )
+        col_left, col_fac, col_gap, col_par, col_right = st.columns([1, 3, 0.5, 3, 1])
 
-        st.markdown("**Fenomeni / Trend iniziali**")
-        st.caption("Un fenomeno per riga. Potrai aggiungerne altri nella fase successiva.")
-        fenomeni_raw = st.text_area(
-            "Un fenomeno per riga",
-            placeholder="Intelligenza Artificiale generativa\nInvecchiamento della popolazione\nTransizione energetica",
-            height=120,
-            label_visibility="collapsed",
-        )
-
-        submitted = st.form_submit_button("Crea sessione", use_container_width=True, type="primary")
-
-    if submitted:
-        if not domanda.strip() or not frame.strip():
-            st.error("Domanda di ricerca e orizzonte temporale sono obbligatori.")
-        else:
-            key_points = [k.strip() for k in kp_raw.strip().splitlines() if k.strip()]
-            fenomeni = [{"testo": f.strip()} for f in fenomeni_raw.strip().splitlines() if f.strip()]
-            sid = crea_sessione(domanda.strip(), frame.strip(), key_points, fenomeni)
-            st.session_state["sessione_id"] = sid
-            st.success(f"Sessione #{sid} creata!")
-            st.switch_page("pages/1_Setup.py")
-
-# Sessioni esistenti
-with col2:
-    st.subheader("📂 Sessioni esistenti")
-    sessioni = lista_sessioni()
-
-    if not sessioni:
-        st.info("Nessuna sessione ancora creata.")
-    else:
-        STATO_EMOJI = {
-            "setup": "⚙️",
-            "horizon_scanning": "🔭",
-            "transizione": "🔀",
-            "scenario_planning": "🗺️",
-            "concluso": "✅",
-        }
-        for s in sessioni:
-            emoji = STATO_EMOJI.get(s["stato"], "•")
+        # ── Card Facilitatore ─────────────────────────────
+        with col_fac:
             with st.container(border=True):
-                col_a, col_b = st.columns([3, 1])
-                with col_a:
-                    st.markdown(f"**#{s['id']}** {emoji} `{s['stato']}`")
-                    st.caption(f"*{s['domanda_ricerca'][:80]}{'...' if len(s['domanda_ricerca']) > 80 else ''}*")
-                    st.caption(f"🕐 {s['frame_temporale']} · {s['created_at'][:10]}")
-                with col_b:
-                    if st.button("Apri", key=f"apri_{s['id']}", use_container_width=True):
-                        st.session_state["sessione_id"] = s["id"]
-                        st.switch_page("pages/1_Setup.py")
+                st.markdown("### 🎙️ Sono il facilitatore")
+                st.caption("Accedi con la password per gestire la sessione")
+                st.markdown("<br>", unsafe_allow_html=True)
+
+                with st.form("login_fac_home"):
+                    pwd = st.text_input("Password", type="password", placeholder="Inserisci la password")
+                    ok = st.form_submit_button("Accedi come facilitatore", use_container_width=True, type="primary")
+
+                if ok:
+                    from lib.auth import get_password
+                    if pwd == get_password():
+                        st.session_state["ruolo"] = "facilitatore"
+                        st.rerun()
+                    else:
+                        st.error("Password non corretta.")
+
+        # ── Card Partecipante ─────────────────────────────
+        with col_par:
+            with st.container(border=True):
+                st.markdown("### 🙋 Sono un partecipante")
+                st.caption("Inserisci il codice della sessione e il tuo nome")
+                st.markdown("<br>", unsafe_allow_html=True)
+
+                with st.form("login_par_home"):
+                    codice = st.text_input(
+                        "Codice sessione",
+                        placeholder="Es. ABCDEF",
+                        max_chars=6,
+                    )
+                    nome = st.text_input("Il tuo nome", placeholder="Es. Mario Rossi")
+                    ok_par = st.form_submit_button("Partecipa", use_container_width=True, type="primary")
+
+                if ok_par:
+                    if not codice.strip() or not nome.strip():
+                        st.error("Inserisci codice sessione e nome.")
+                    else:
+                        sessione = get_sessione_by_codice(codice.strip())
+                        if not sessione:
+                            st.error("Codice sessione non trovato. Verifica con il facilitatore.")
+                        else:
+                            partecipante = registra_partecipante(sessione["id"], nome.strip())
+                            st.session_state["ruolo"] = "partecipante"
+                            st.session_state["partecipante"] = partecipante
+                            st.rerun()
+
+    pg = st.navigation({"": [st.Page(_home, title="Home", default=True)]})
+    pg.run()

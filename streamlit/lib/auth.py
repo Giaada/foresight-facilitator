@@ -9,9 +9,9 @@ def get_password():
         return os.environ.get("FACILITATOR_PASSWORD", "foresight2025")
 
 
-def check_auth():
-    """Mostra il form di login se non autenticato. Blocca l'esecuzione della pagina."""
-    if st.session_state.get("autenticato"):
+def check_facilitatore():
+    """Controlla che il ruolo sia 'facilitatore'. Se no, mostra form login e blocca."""
+    if st.session_state.get("ruolo") == "facilitatore":
         return
 
     st.markdown(
@@ -31,15 +31,20 @@ def check_auth():
         st.markdown("**Area riservata al facilitatore**")
         st.divider()
 
-        with st.form("login_form"):
+        with st.form("login_form_fac"):
             password = st.text_input("Password", type="password", placeholder="Inserisci la password")
             submitted = st.form_submit_button("Accedi", use_container_width=True, type="primary")
 
         if submitted:
             if password == get_password():
-                st.session_state["autenticato"] = True
+                st.session_state["ruolo"] = "facilitatore"
                 st.rerun()
             else:
                 st.error("Password non corretta.")
 
     st.stop()
+
+
+# Alias per compatibilità con eventuali import residui
+def check_auth():
+    check_facilitatore()

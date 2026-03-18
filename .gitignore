@@ -51,3 +51,5 @@ next-env.d.ts
 # streamlit
 streamlit/.streamlit/secrets.toml
 streamlit/foresight.db
+streamlit/**/__pycache__/
+streamlit/__pycache__/

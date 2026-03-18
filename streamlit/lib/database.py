@@ -1,6 +1,7 @@
 import sqlite3
 import json
-import os
+import random
+import string
 from pathlib import Path
 
 DB_PATH = Path(__file__).parent.parent / "foresight.db"
@@ -17,6 +18,7 @@ def init_db():
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS sessione (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            codice TEXT UNIQUE,
             domanda_ricerca TEXT NOT NULL,
             frame_temporale TEXT NOT NULL,
             key_points TEXT NOT NULL DEFAULT '[]',
@@ -34,9 +36,28 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             sessione_id INTEGER NOT NULL,
             testo TEXT NOT NULL,
-            descrizione TEXT,
+            descrizione TEXT DEFAULT '',
             priorita INTEGER DEFAULT 999,
             FOREIGN KEY (sessione_id) REFERENCES sessione(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS partecipante (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sessione_id INTEGER NOT NULL,
+            nome TEXT NOT NULL,
+            gruppo_numero INTEGER,
+            votato INTEGER NOT NULL DEFAULT 0,
+            FOREIGN KEY (sessione_id) REFERENCES sessione(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS voto (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            partecipante_id INTEGER NOT NULL,
+            fenomeno_id INTEGER NOT NULL,
+            posizione INTEGER NOT NULL,
+            UNIQUE(partecipante_id, fenomeno_id),
+            FOREIGN KEY (partecipante_id) REFERENCES partecipante(id),
+            FOREIGN KEY (fenomeno_id) REFERENCES fenomeno(id)
         );
 
         CREATE TABLE IF NOT EXISTS scenario (
@@ -66,13 +87,25 @@ def init_db():
     conn.close()
 
 
+# ── Utilità ───────────────────────────────────────────────
+
+def genera_codice(n=6):
+    return "".join(random.choices(string.ascii_uppercase, k=n))
+
+
 # ── Sessione ──────────────────────────────────────────────
 
 def crea_sessione(domanda, frame, key_points, fenomeni):
     conn = get_conn()
+    # Genera codice univoco
+    for _ in range(20):
+        codice = genera_codice(6)
+        existing = conn.execute("SELECT id FROM sessione WHERE codice = ?", (codice,)).fetchone()
+        if not existing:
+            break
     cur = conn.execute(
-        "INSERT INTO sessione (domanda_ricerca, frame_temporale, key_points) VALUES (?, ?, ?)",
-        (domanda, frame, json.dumps(key_points))
+        "INSERT INTO sessione (codice, domanda_ricerca, frame_temporale, key_points) VALUES (?, ?, ?, ?)",
+        (codice, domanda, frame, json.dumps(key_points, ensure_ascii=False))
     )
     sid = cur.lastrowid
     for i, f in enumerate(fenomeni):
@@ -85,20 +118,41 @@ def crea_sessione(domanda, frame, key_points, fenomeni):
     return sid
 
 
-def get_sessione(sid):
-    conn = get_conn()
-    row = conn.execute("SELECT * FROM sessione WHERE id = ?", (sid,)).fetchone()
-    conn.close()
+def _parse_sessione(row):
     if not row:
         return None
     d = dict(row)
-    d["key_points"] = json.loads(d["key_points"])
+    try:
+        d["key_points"] = json.loads(d["key_points"])
+    except Exception:
+        d["key_points"] = []
     return d
+
+
+def get_sessione_by_id(sid):
+    conn = get_conn()
+    row = conn.execute("SELECT * FROM sessione WHERE id = ?", (sid,)).fetchone()
+    conn.close()
+    return _parse_sessione(row)
+
+
+def get_sessione_by_codice(codice):
+    conn = get_conn()
+    row = conn.execute("SELECT * FROM sessione WHERE codice = ?", (codice.upper(),)).fetchone()
+    conn.close()
+    return _parse_sessione(row)
+
+
+# Alias per compatibilità
+def get_sessione(sid):
+    return get_sessione_by_id(sid)
 
 
 def aggiorna_sessione(sid, **kwargs):
     if not kwargs:
         return
+    if "key_points" in kwargs and isinstance(kwargs["key_points"], list):
+        kwargs["key_points"] = json.dumps(kwargs["key_points"], ensure_ascii=False)
     fields = ", ".join(f"{k} = ?" for k in kwargs)
     values = list(kwargs.values()) + [sid]
     conn = get_conn()
@@ -109,34 +163,31 @@ def aggiorna_sessione(sid, **kwargs):
 
 def lista_sessioni():
     conn = get_conn()
-    rows = conn.execute("SELECT id, domanda_ricerca, frame_temporale, stato, created_at FROM sessione ORDER BY created_at DESC").fetchall()
+    rows = conn.execute(
+        "SELECT id, codice, domanda_ricerca, frame_temporale, stato, created_at FROM sessione ORDER BY created_at DESC"
+    ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
 
 # ── Fenomeni ──────────────────────────────────────────────
 
-def get_fenomeni(sid):
+def get_fenomeni(sessione_id):
     conn = get_conn()
-    rows = conn.execute("SELECT * FROM fenomeno WHERE sessione_id = ? ORDER BY priorita ASC", (sid,)).fetchall()
+    rows = conn.execute(
+        "SELECT * FROM fenomeno WHERE sessione_id = ? ORDER BY priorita ASC",
+        (sessione_id,)
+    ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
 
-def aggiungi_fenomeno(sid, testo, descrizione=""):
+def aggiungi_fenomeno(sessione_id, testo, descrizione=""):
     conn = get_conn()
     conn.execute(
         "INSERT INTO fenomeno (sessione_id, testo, descrizione, priorita) VALUES (?, ?, ?, ?)",
-        (sid, testo, descrizione, 999)
+        (sessione_id, testo, descrizione, 999)
     )
-    conn.commit()
-    conn.close()
-
-
-def aggiorna_priorita_fenomeni(sid, ordine_ids):
-    conn = get_conn()
-    for i, fid in enumerate(ordine_ids):
-        conn.execute("UPDATE fenomeno SET priorita = ? WHERE id = ? AND sessione_id = ?", (i, fid, sid))
     conn.commit()
     conn.close()
 
@@ -148,52 +199,140 @@ def elimina_fenomeno(fid):
     conn.close()
 
 
-# ── Scenari ───────────────────────────────────────────────
-
-def crea_scenari(sid):
-    quadranti = [("++", 1), ("+-", 2), ("-+", 3), ("--", 4)]
+def aggiorna_priorita_fenomeni(sessione_id, ordine_ids):
     conn = get_conn()
-    conn.execute("DELETE FROM scenario WHERE sessione_id = ?", (sid,))
-    for q, n in quadranti:
+    for i, fid in enumerate(ordine_ids):
         conn.execute(
-            "INSERT INTO scenario (sessione_id, numero, quadrante) VALUES (?, ?, ?)",
-            (sid, n, q)
+            "UPDATE fenomeno SET priorita = ? WHERE id = ? AND sessione_id = ?",
+            (i, fid, sessione_id)
         )
     conn.commit()
     conn.close()
 
 
-def get_scenari(sid):
+# ── Partecipanti ──────────────────────────────────────────
+
+def registra_partecipante(sessione_id, nome):
     conn = get_conn()
-    rows = conn.execute("SELECT * FROM scenario WHERE sessione_id = ? ORDER BY numero", (sid,)).fetchall()
+    cur = conn.execute(
+        "INSERT INTO partecipante (sessione_id, nome) VALUES (?, ?)",
+        (sessione_id, nome)
+    )
+    pid = cur.lastrowid
+    conn.commit()
     conn.close()
-    result = []
-    for r in rows:
-        d = dict(r)
+    return {"id": pid, "nome": nome, "sessione_id": sessione_id}
+
+
+def get_partecipanti(sessione_id):
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT * FROM partecipante WHERE sessione_id = ? ORDER BY id ASC",
+        (sessione_id,)
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def aggiorna_partecipante(pid, **kwargs):
+    if not kwargs:
+        return
+    fields = ", ".join(f"{k} = ?" for k in kwargs)
+    values = list(kwargs.values()) + [pid]
+    conn = get_conn()
+    conn.execute(f"UPDATE partecipante SET {fields} WHERE id = ?", values)
+    conn.commit()
+    conn.close()
+
+
+# ── Voti ──────────────────────────────────────────────────
+
+def salva_voti(partecipante_id, ranking):
+    """ranking è lista di {fenomeno_id, posizione}"""
+    conn = get_conn()
+    conn.execute("DELETE FROM voto WHERE partecipante_id = ?", (partecipante_id,))
+    for v in ranking:
+        conn.execute(
+            "INSERT OR REPLACE INTO voto (partecipante_id, fenomeno_id, posizione) VALUES (?, ?, ?)",
+            (partecipante_id, v["fenomeno_id"], v["posizione"])
+        )
+    conn.execute("UPDATE partecipante SET votato = 1 WHERE id = ?", (partecipante_id,))
+    conn.commit()
+    conn.close()
+
+
+def get_voti_aggregati(sessione_id):
+    """Ritorna lista {fenomeno_id, media_posizione, conteggio} ordinata per media ASC"""
+    conn = get_conn()
+    rows = conn.execute(
+        """
+        SELECT v.fenomeno_id, AVG(v.posizione) as media_posizione, COUNT(v.id) as conteggio
+        FROM voto v
+        JOIN fenomeno f ON f.id = v.fenomeno_id
+        WHERE f.sessione_id = ?
+        GROUP BY v.fenomeno_id
+        ORDER BY media_posizione ASC
+        """,
+        (sessione_id,)
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+# ── Scenari ───────────────────────────────────────────────
+
+def crea_scenari(sessione_id):
+    quadranti = [("++", 1), ("+-", 2), ("-+", 3), ("--", 4)]
+    conn = get_conn()
+    conn.execute("DELETE FROM scenario WHERE sessione_id = ?", (sessione_id,))
+    for q, n in quadranti:
+        conn.execute(
+            "INSERT INTO scenario (sessione_id, numero, quadrante) VALUES (?, ?, ?)",
+            (sessione_id, n, q)
+        )
+    conn.commit()
+    conn.close()
+
+
+def _parse_scenario(row):
+    if not row:
+        return None
+    d = dict(row)
+    try:
         d["minacce"] = json.loads(d["minacce"] or "[]")
+    except Exception:
+        d["minacce"] = []
+    try:
         d["opportunita"] = json.loads(d["opportunita"] or "[]")
+    except Exception:
+        d["opportunita"] = []
+    try:
         d["key_points_data"] = json.loads(d["key_points_data"] or "{}")
-        result.append(d)
-    return result
+    except Exception:
+        d["key_points_data"] = {}
+    return d
+
+
+def get_scenari(sessione_id):
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT * FROM scenario WHERE sessione_id = ? ORDER BY numero",
+        (sessione_id,)
+    ).fetchall()
+    conn.close()
+    return [_parse_scenario(r) for r in rows]
 
 
 def get_scenario(scenario_id):
     conn = get_conn()
     row = conn.execute("SELECT * FROM scenario WHERE id = ?", (scenario_id,)).fetchone()
     conn.close()
-    if not row:
-        return None
-    d = dict(row)
-    d["minacce"] = json.loads(d["minacce"] or "[]")
-    d["opportunita"] = json.loads(d["opportunita"] or "[]")
-    d["key_points_data"] = json.loads(d["key_points_data"] or "{}")
-    return d
+    return _parse_scenario(row)
 
 
 def aggiorna_scenario(scenario_id, **kwargs):
     if not kwargs:
         return
-    # Serializza liste/dict
     for k in ["minacce", "opportunita", "key_points_data"]:
         if k in kwargs and not isinstance(kwargs[k], str):
             kwargs[k] = json.dumps(kwargs[k], ensure_ascii=False)

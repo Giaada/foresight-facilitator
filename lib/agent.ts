@@ -82,7 +82,7 @@ Rispondi SEMPRE con un JSON in questo formato:
 Se outputAggiornato non ha campi da aggiornare, metti null.`;
 
   // Costruisce la history dei messaggi
-  const history = gruppo.messaggi.map((m) => ({
+  const history = gruppo.messaggi.map((m: { ruolo: string; contenuto: string }) => ({
     role: m.ruolo as "user" | "assistant",
     content: m.contenuto,
   }));

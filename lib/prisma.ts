@@ -1,3 +1,5 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore — file generato automaticamente da Prisma
 import { PrismaClient } from "@/app/generated/prisma";
 
 const globalForPrisma = globalThis as unknown as {

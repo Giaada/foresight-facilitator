@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
     driver2NegPolo: sessione.driver2NegPolo,
     fenomeni: sessione.fenomeni,
     partecipanti: sessione.partecipanti,
-    gruppi: sessione.gruppi.map((g) => ({
+    gruppi: sessione.gruppi.map((g: typeof sessione.gruppi[0]) => ({
       ...g,
       scenarioOutput: g.scenarioOutput
         ? {

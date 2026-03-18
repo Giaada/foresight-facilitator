@@ -7,7 +7,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from lib.auth import check_facilitatore
 from lib.database import (
     get_sessione_by_id, aggiorna_sessione, get_fenomeni,
-    aggiungi_fenomeno, elimina_fenomeno, crea_sessione, lista_sessioni
+    aggiungi_fenomeno, elimina_fenomeno, crea_sessione, lista_sessioni,
+    elimina_sessione
 )
 
 check_facilitatore()
@@ -79,7 +80,7 @@ if not st.session_state.get("sessione_id"):
             for s in sessioni:
                 emoji = STATO_EMOJI.get(s["stato"], "•")
                 with st.container(border=True):
-                    col_a, col_b = st.columns([3, 1])
+                    col_a, col_b, col_c = st.columns([3, 1, 1])
                     with col_a:
                         codice_str = f" · `{s['codice']}`" if s.get("codice") else ""
                         st.markdown(f"**#{s['id']}**{codice_str} {emoji} `{s['stato']}`")
@@ -88,6 +89,24 @@ if not st.session_state.get("sessione_id"):
                     with col_b:
                         if st.button("Apri", key=f"apri_{s['id']}", use_container_width=True):
                             st.session_state["sessione_id"] = s["id"]
+                            st.rerun()
+                    with col_c:
+                        if st.button("🗑️", key=f"del_sess_{s['id']}", use_container_width=True, help="Elimina sessione e tutti i dati"):
+                            st.session_state[f"confirm_del_{s['id']}"] = True
+                            st.rerun()
+
+                # Conferma eliminazione (appare sotto il container)
+                if st.session_state.get(f"confirm_del_{s['id']}"):
+                    st.warning(f"⚠️ Eliminare la sessione **#{s['id']}** e tutti i suoi dati (partecipanti, voti, scenari)? Operazione irreversibile.")
+                    col_yes, col_no = st.columns(2)
+                    with col_yes:
+                        if st.button("Sì, elimina", key=f"yes_del_{s['id']}", type="primary", use_container_width=True):
+                            elimina_sessione(s["id"])
+                            st.session_state.pop(f"confirm_del_{s['id']}", None)
+                            st.rerun()
+                    with col_no:
+                        if st.button("Annulla", key=f"no_del_{s['id']}", use_container_width=True):
+                            st.session_state.pop(f"confirm_del_{s['id']}", None)
                             st.rerun()
     st.stop()
 

@@ -199,6 +199,27 @@ def elimina_fenomeno(fid):
     conn.close()
 
 
+def elimina_sessione(sessione_id):
+    """Elimina una sessione e tutti i dati collegati (cascata manuale)."""
+    conn = get_conn()
+    conn.execute("""
+        DELETE FROM voto WHERE partecipante_id IN (
+            SELECT id FROM partecipante WHERE sessione_id = ?
+        )
+    """, (sessione_id,))
+    conn.execute("""
+        DELETE FROM messaggio WHERE scenario_id IN (
+            SELECT id FROM scenario WHERE sessione_id = ?
+        )
+    """, (sessione_id,))
+    conn.execute("DELETE FROM scenario WHERE sessione_id = ?", (sessione_id,))
+    conn.execute("DELETE FROM partecipante WHERE sessione_id = ?", (sessione_id,))
+    conn.execute("DELETE FROM fenomeno WHERE sessione_id = ?", (sessione_id,))
+    conn.execute("DELETE FROM sessione WHERE id = ?", (sessione_id,))
+    conn.commit()
+    conn.close()
+
+
 def aggiorna_priorita_fenomeni(sessione_id, ordine_ids):
     conn = get_conn()
     for i, fid in enumerate(ordine_ids):

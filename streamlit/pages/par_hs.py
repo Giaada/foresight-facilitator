@@ -82,8 +82,18 @@ except ImportError:
     SORTABLE = False
 
 # Inizializza ordine in session state se non presente
-if "ranking_items" not in st.session_state or len(st.session_state["ranking_items"]) != len(fenomeni):
-    st.session_state["ranking_items"] = [f["testo"] for f in fenomeni]
+fenomeni_testi = [f["testo"] for f in fenomeni]
+if "ranking_items" not in st.session_state:
+    st.session_state["ranking_items"] = fenomeni_testi
+else:
+    # Aggiungi eventuali nuovi fenomeni non ancora nella lista locale
+    for testo in fenomeni_testi:
+        if testo not in st.session_state["ranking_items"]:
+            st.session_state["ranking_items"].append(testo)
+    # Rimuovi fenomeni eliminati dal DB
+    st.session_state["ranking_items"] = [
+        t for t in st.session_state["ranking_items"] if t in fenomeni_testi
+    ]
 
 if SORTABLE:
     sorted_items = sort_items(
@@ -91,9 +101,8 @@ if SORTABLE:
         direction="vertical",
         key="sort_par_hs",
     )
-    if sorted_items != st.session_state["ranking_items"]:
-        st.session_state["ranking_items"] = sorted_items
-        st.rerun()
+    # Aggiorna state senza rerun (evita di perdere click sui bottoni)
+    st.session_state["ranking_items"] = sorted_items
 
     st.markdown("**Ordine attuale (1 = più rilevante):**")
     for i, testo in enumerate(sorted_items):
@@ -133,8 +142,7 @@ st.divider()
 st.subheader("➕ Proponi un nuovo fenomeno")
 st.caption("Puoi aggiungere un fenomeno o trend che ritieni rilevante e non è ancora in lista.")
 
-_nuovo_submitted = False
-with st.form("aggiungi_fenomeno_par", clear_on_submit=True):
+with st.form("aggiungi_fenomeno_par"):
     nuovo_testo = st.text_input(
         "Fenomeno / trend",
         placeholder="Es. Blockchain nella pubblica amministrazione",
@@ -143,11 +151,16 @@ with st.form("aggiungi_fenomeno_par", clear_on_submit=True):
     _nuovo_submitted = st.form_submit_button("Aggiungi fenomeno", use_container_width=True)
 
 if _nuovo_submitted:
-    if nuovo_testo.strip():
-        aggiungi_fenomeno(sessione_id, nuovo_testo.strip())
-        # Aggiorna ranking locale
-        st.session_state["ranking_items"] = [nuovo_testo.strip()] + st.session_state.get("ranking_items", [])
-        st.success(f"Fenomeno '{nuovo_testo.strip()}' aggiunto!")
+    testo_pulito = nuovo_testo.strip()
+    if testo_pulito:
+        aggiungi_fenomeno(sessione_id, testo_pulito)
+        # Prependi il nuovo fenomeno in cima al ranking locale
+        st.session_state["ranking_items"] = [testo_pulito] + [
+            t for t in st.session_state.get("ranking_items", []) if t != testo_pulito
+        ]
+        st.success(f"Fenomeno '{testo_pulito}' aggiunto!")
+    else:
+        st.warning("Inserisci il testo del fenomeno.")
     st.rerun()
 
 st.divider()

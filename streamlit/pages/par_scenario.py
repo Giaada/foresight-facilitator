@@ -40,6 +40,14 @@ stato = sessione.get("stato")
 
 if stato not in ("scenario_planning", "concluso"):
     st.info("⏳ La sessione non è ancora nella fase di Scenario Planning. Attendi istruzioni dal facilitatore.")
+
+    @st.fragment(run_every=10)
+    def _attendi_scenario():
+        s = get_sessione_by_id(sessione_id)
+        if s and s.get("stato") in ("scenario_planning", "concluso"):
+            st.rerun()
+    _attendi_scenario()
+
     if st.button("🔄 Aggiorna"):
         st.rerun()
     st.stop()
@@ -51,6 +59,15 @@ gruppo_numero = par_db.get("gruppo_numero") if par_db else None
 
 if not gruppo_numero:
     st.info("⏳ Non sei ancora stato/a assegnato/a a un gruppo. Attendi che il facilitatore assegni i gruppi.")
+
+    @st.fragment(run_every=10)
+    def _attendi_gruppo():
+        plist = get_partecipanti(sessione_id)
+        p = next((x for x in plist if x["id"] == partecipante_id), None)
+        if p and p.get("gruppo_numero"):
+            st.rerun()
+    _attendi_gruppo()
+
     if st.button("🔄 Aggiorna"):
         st.rerun()
     st.stop()

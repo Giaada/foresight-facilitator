@@ -25,7 +25,7 @@ if not sessione:
     st.stop()
 
 # ── Header ────────────────────────────────────────────────
-st.markdown(f"## 🔭 Horizon Scanning")
+st.markdown("## 🔭 Horizon Scanning")
 st.markdown(f"👤 Benvenuto/a, **{nome}**!")
 
 with st.container(border=True):
@@ -56,10 +56,43 @@ par_db = next((p for p in partecipanti_db if p["id"] == partecipante_id), None)
 
 if par_db and par_db.get("votato"):
     st.success("✅ Hai già inviato il tuo ranking!")
-    st.markdown("Grazie per aver partecipato alla fase di Horizon Scanning.")
-    st.markdown("Attendi le istruzioni del facilitatore per la prossima fase.")
-    if st.button("🔄 Aggiorna stato sessione"):
-        st.rerun()
+
+    if stato in ("scenario_planning", "concluso"):
+        # Facilitatore ha avviato lo Scenario Planning → mostra link prominente
+        st.markdown(
+            """
+            <div style="
+                background: #ede9fe;
+                border: 2px solid #7c3aed;
+                border-radius: 12px;
+                padding: 20px;
+                text-align: center;
+                margin: 16px 0;
+            ">
+                <div style="font-size:1.4em;font-weight:700;color:#4c1d95;margin-bottom:6px">
+                    🗺️ Lo Scenario Planning è iniziato!
+                </div>
+                <div style="color:#5b21b6">
+                    Il facilitatore ha avviato la fase successiva. Clicca il bottone per continuare.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        if st.button("▶️ Vai allo Scenario Planning", type="primary", use_container_width=True):
+            st.switch_page("pages/par_scenario.py")
+    else:
+        st.markdown("Grazie per aver partecipato alla fase di Horizon Scanning.")
+        st.markdown("Attendi le istruzioni del facilitatore per la prossima fase.")
+        # Auto-refresh ogni 10s per rilevare quando il facilitatore avanza
+        @st.fragment(run_every=10)
+        def _attendi_avanzamento():
+            s = get_sessione_by_id(sessione_id)
+            if s and s.get("stato") in ("scenario_planning", "concluso"):
+                st.rerun()
+        _attendi_avanzamento()
+        if st.button("🔄 Aggiorna stato sessione"):
+            st.rerun()
     st.stop()
 
 # ── Fase attiva: ranking fenomeni ─────────────────────────
@@ -81,27 +114,32 @@ try:
 except ImportError:
     SORTABLE = False
 
-# Inizializza ordine in session state se non presente
 fenomeni_testi = [f["testo"] for f in fenomeni]
+fenomeni_set = set(fenomeni_testi)
+
+# Inizializza ranking in session state se non presente
 if "ranking_items" not in st.session_state:
-    st.session_state["ranking_items"] = fenomeni_testi
-else:
-    # Aggiungi eventuali nuovi fenomeni non ancora nella lista locale
-    for testo in fenomeni_testi:
-        if testo not in st.session_state["ranking_items"]:
-            st.session_state["ranking_items"].append(testo)
-    # Rimuovi fenomeni eliminati dal DB
-    st.session_state["ranking_items"] = [
-        t for t in st.session_state["ranking_items"] if t in fenomeni_testi
-    ]
+    st.session_state["ranking_items"] = fenomeni_testi[:]
 
 if SORTABLE:
+    # Chiave include la lunghezza così il componente si re-inizializza quando cambia la lista
+    sort_key = f"sort_par_hs_{len(fenomeni_testi)}"
+
     sorted_items = sort_items(
         st.session_state["ranking_items"],
         direction="vertical",
-        key="sort_par_hs",
+        key=sort_key,
     )
-    # Aggiorna state senza rerun (evita di perdere click sui bottoni)
+
+    # ── Sincronizza DOPO sort_items: aggiunge nuovi fenomeni che
+    #    il componente non conosce ancora (es. appena aggiunti al DB)
+    sorted_set = set(sorted_items)
+    for testo in fenomeni_testi:
+        if testo not in sorted_set:
+            sorted_items = sorted_items + [testo]
+    # Rimuovi fenomeni eliminati dal DB
+    sorted_items = [t for t in sorted_items if t in fenomeni_set]
+
     st.session_state["ranking_items"] = sorted_items
 
     st.markdown("**Ordine attuale (1 = più rilevante):**")
@@ -117,6 +155,7 @@ if SORTABLE:
             st.markdown(f"{'**' if i < 3 else ''}{testo}{'**' if i < 3 else ''}")
 
     ranking_finale = sorted_items
+
 else:
     st.info("💡 Drag & drop non disponibile. Usa i numeri per assegnare la priorità (1 = più rilevante).")
     nuovi_ordini = {}
@@ -128,8 +167,6 @@ else:
             value=fenomeni.index(f) + 1,
             key=f"prio_par_{f['id']}",
         )
-    # Ordina per valore assegnato
-    id_map = {f["testo"]: f["id"] for f in fenomeni}
     ordinato = sorted(nuovi_ordini.items(), key=lambda x: x[1])
     ranking_finale = [
         next(f["testo"] for f in fenomeni if f["id"] == fid)
@@ -147,6 +184,7 @@ with st.form("aggiungi_fenomeno_par"):
         "Fenomeno / trend",
         placeholder="Es. Blockchain nella pubblica amministrazione",
         label_visibility="collapsed",
+        key="input_nuovo_fenomeno",
     )
     _nuovo_submitted = st.form_submit_button("Aggiungi fenomeno", use_container_width=True)
 
@@ -154,7 +192,7 @@ if _nuovo_submitted:
     testo_pulito = nuovo_testo.strip()
     if testo_pulito:
         aggiungi_fenomeno(sessione_id, testo_pulito)
-        # Prependi il nuovo fenomeno in cima al ranking locale
+        # Prependi in cima (prima del rerun e della re-init del componente)
         st.session_state["ranking_items"] = [testo_pulito] + [
             t for t in st.session_state.get("ranking_items", []) if t != testo_pulito
         ]
@@ -170,7 +208,6 @@ st.subheader("✅ Conferma il tuo ranking")
 st.caption("Una volta confermato, non potrai modificare il tuo voto.")
 
 if st.button("Conferma il mio ranking", type="primary", use_container_width=True):
-    # Costruisce lista di voti
     id_map = {f["testo"]: f["id"] for f in get_fenomeni(sessione_id)}
     ranking_voti = []
     for pos, testo in enumerate(ranking_finale):
@@ -179,7 +216,6 @@ if st.button("Conferma il mio ranking", type="primary", use_container_width=True
             ranking_voti.append({"fenomeno_id": fid, "posizione": pos + 1})
 
     salva_voti(partecipante_id, ranking_voti)
-    # Aggiorna session state locale
     st.session_state["partecipante"] = {
         **st.session_state["partecipante"],
         "votato": 1,

@@ -43,7 +43,11 @@ with col_left:
         n_votato = sum(1 for p in partecipanti if p["votato"])
         n_totale = len(partecipanti)
 
-        st.markdown(f"**{n_votato}/{n_totale} hanno votato**")
+        if n_totale > 0 and n_votato == n_totale:
+            st.success(f"🎉 Tutti i {n_totale} partecipanti hanno votato! Puoi procedere alla Transizione.")
+        else:
+            st.markdown(f"**{n_votato}/{n_totale} hanno votato**")
+
         if n_totale > 0:
             st.progress(n_votato / n_totale)
         else:
@@ -120,13 +124,12 @@ st.divider()
 
 # ── Aggiungi fenomeno ─────────────────────────────────────
 st.subheader("➕ Aggiungi fenomeno")
-_fen_submitted = False
-with st.form("aggiungi_fenomeno_hs", clear_on_submit=True):
+with st.form("aggiungi_fenomeno_hs"):
     col_t, col_d, col_btn = st.columns([4, 4, 1])
     with col_t:
-        nuovo_testo = st.text_input("Fenomeno / trend", placeholder="Scrivi il fenomeno...", label_visibility="collapsed")
+        nuovo_testo = st.text_input("Fenomeno / trend", placeholder="Scrivi il fenomeno...", label_visibility="collapsed", key="fac_hs_nuovo_testo")
     with col_d:
-        nuova_descr = st.text_input("Descrizione (opzionale)", placeholder="Breve spiegazione...", label_visibility="collapsed")
+        nuova_descr = st.text_input("Descrizione (opzionale)", placeholder="Breve spiegazione...", label_visibility="collapsed", key="fac_hs_nuova_descr")
     with col_btn:
         _fen_submitted = st.form_submit_button("Aggiungi", use_container_width=True, type="primary")
 

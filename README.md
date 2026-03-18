@@ -1,36 +1,92 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Foresight Facilitator
 
-## Getting Started
+Interfaccia agente per sessioni di **Strategic Foresight** con facilitazione AI in tempo reale.
 
-First, run the development server:
+## Funzionalità
+
+- **Horizon Scanning** — i partecipanti votano (ranking) trend e fenomeni in modo individuale
+- **Dashboard Facilitatore** — monitoraggio live dei voti, approvazione fenomeni aggiunti dai partecipanti
+- **Transizione** — selezione dei 2 driver principali, definizione assi, creazione gruppi
+- **Scenario Planning** — l'agente AI guida ogni gruppo (4 persone) attraverso la costruzione dello scenario
+- **Report finale** — export HTML/PDF con tutti gli scenari, minacce e opportunità
+
+## Stack
+
+- [Next.js 16](https://nextjs.org/) + TypeScript + Tailwind CSS
+- [Socket.io](https://socket.io/) per comunicazione in tempo reale
+- [Prisma](https://prisma.io/) + SQLite come database
+- [Claude API (Anthropic)](https://anthropic.com/) per l'agente AI
+
+## Setup
+
+### 1. Clona il repository
+
+```bash
+git clone https://github.com/tuo-username/foresight-facilitator.git
+cd foresight-facilitator
+```
+
+### 2. Installa le dipendenze
+
+```bash
+npm install
+```
+
+### 3. Configura le variabili d'ambiente
+
+```bash
+cp .env.example .env
+```
+
+Apri `.env` e inserisci la tua API key di Anthropic:
+
+```
+ANTHROPIC_API_KEY="sk-ant-..."
+DATABASE_URL="file:./prisma/dev.db"
+```
+
+### 4. Inizializza il database
+
+```bash
+npx prisma migrate dev
+```
+
+### 5. Avvia il server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+L'app sarà disponibile su [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Struttura sessione
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+Setup Facilitatore
+  → Crea sessione (domanda di ricerca, orizzonte temporale, fenomeni, key points)
+  → Condivide il codice sessione con i partecipanti
 
-## Learn More
+Fase 1: Horizon Scanning (individuale)
+  → I partecipanti accedono con il codice e il proprio nome
+  → Ordinano i fenomeni per priorità (drag & drop)
+  → Possono aggiungere nuovi fenomeni
+  → Il facilitatore vede il ranking aggregato in tempo reale
 
-To learn more about Next.js, take a look at the following resources:
+Transizione
+  → Il facilitatore seleziona i 2 driver principali
+  → Definisce le polarità degli assi
+  → Assegna i partecipanti ai 4 gruppi
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Fase 2: Scenario Planning (gruppi di 4)
+  → L'agente AI introduce il quadrante e guida il gruppo
+  → Esplora i key points, genera narrativa, raccoglie titolo, minacce e opportunità
+  → Il facilitatore monitora l'avanzamento di tutti i gruppi
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Output finale
+  → Report con i 4 scenari completi
+  → Dashboard con matrice 2x2
+```
 
-## Deploy on Vercel
+## Licenza
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT

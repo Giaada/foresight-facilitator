@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Sessione {
+  id              String   @id @default(cuid())
+  codice          String   @unique
+  codiceFacilitatore String @unique
+  domandaRicerca  String
+  frameTemporale  String
+  keyPoints       String   // JSON array di stringhe
+  stato           String   @default("setup") // setup | horizon_scanning | transizione | scenario_planning | concluso
+  driver1Nome     String?
+  driver1PosPolo  String?
+  driver1NegPolo  String?
+  driver2Nome     String?
+  driver2PosPolo  String?
+  driver2NegPolo  String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  fenomeni       Fenomeno[]
+  partecipanti   Partecipante[]
+  gruppi         Gruppo[]
+}
+
+model Fenomeno {
+  id          String   @id @default(cuid())
+  testo       String
+  descrizione String?
+  autore      String   @default("facilitatore") // facilitatore | partecipante
+  approvato   Boolean  @default(true)
+  sessioneId  String
+  sessione    Sessione @relation(fields: [sessioneId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  voti Voto[]
+}
+
+model Partecipante {
+  id         String   @id @default(cuid())
+  nome       String
+  codice     String   @unique
+  sessioneId String
+  sessione   Sessione @relation(fields: [sessioneId], references: [id], onDelete: Cascade)
+  gruppoId   String?
+  gruppo     Gruppo?  @relation(fields: [gruppoId], references: [id])
+  votato     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  voti Voto[]
+}
+
+model Voto {
+  id             String       @id @default(cuid())
+  posizione      Int
+  partecipanteId String
+  partecipante   Partecipante @relation(fields: [partecipanteId], references: [id], onDelete: Cascade)
+  fenomenoId     String
+  fenomeno       Fenomeno     @relation(fields: [fenomenoId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@unique([partecipanteId, fenomenoId])
+}
+
+model Gruppo {
+  id         String   @id @default(cuid())
+  numero     Int
+  quadrante  String   // es. "++", "+-", "-+", "--"
+  nomeScenario String?
+  sessioneId String
+  sessione   Sessione @relation(fields: [sessioneId], references: [id], onDelete: Cascade)
+  stepCorrente String @default("intro") // intro | key_points | narrativa | titolo | minacce | opportunita | concluso
+  createdAt  DateTime @default(now())
+
+  partecipanti  Partecipante[]
+  messaggi      MessaggioChat[]
+  scenarioOutput ScenarioOutput?
+}
+
+model MessaggioChat {
+  id        String   @id @default(cuid())
+  autore    String   // "agente" | nome partecipante
+  ruolo     String   // "assistant" | "user"
+  contenuto String
+  gruppoId  String
+  gruppo    Gruppo   @relation(fields: [gruppoId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model ScenarioOutput {
+  id            String   @id @default(cuid())
+  gruppoId      String   @unique
+  gruppo        Gruppo   @relation(fields: [gruppoId], references: [id], onDelete: Cascade)
+  narrativa     String?
+  titolo        String?
+  minacce       String?  // JSON array
+  opportunita   String?  // JSON array
+  keyPointsData String?  // JSON object con risposte per key point
+  updatedAt     DateTime @updatedAt
+}

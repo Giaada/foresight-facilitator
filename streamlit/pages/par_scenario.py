@@ -45,10 +45,10 @@ if stato not in ("scenario_planning", "concluso"):
     def _attendi_scenario():
         s = get_sessione_by_id(sessione_id)
         if s and s.get("stato") in ("scenario_planning", "concluso"):
-            st.rerun()
+            st.rerun(scope="app")
     _attendi_scenario()
 
-    if st.button("🔄 Aggiorna"):
+    if st.button("🔄 Aggiorna", key="btn_aggiorna_stato"):
         st.rerun()
     st.stop()
 
@@ -65,10 +65,10 @@ if not gruppo_numero:
         plist = get_partecipanti(sessione_id)
         p = next((x for x in plist if x["id"] == partecipante_id), None)
         if p and p.get("gruppo_numero"):
-            st.rerun()
+            st.rerun(scope="app")
     _attendi_gruppo()
 
-    if st.button("🔄 Aggiorna"):
+    if st.button("🔄 Aggiorna", key="btn_aggiorna_gruppo"):
         st.rerun()
     st.stop()
 

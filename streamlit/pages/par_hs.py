@@ -89,7 +89,7 @@ if par_db and par_db.get("votato"):
         def _attendi_avanzamento():
             s = get_sessione_by_id(sessione_id)
             if s and s.get("stato") in ("scenario_planning", "concluso"):
-                st.rerun()
+                st.rerun(scope="app")
         _attendi_avanzamento()
         if st.button("🔄 Aggiorna stato sessione"):
             st.rerun()

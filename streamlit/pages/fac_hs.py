@@ -116,7 +116,7 @@ with col_right:
             with col_d:
                 if st.button("🗑️", key=f"rm_hs_{f['id']}", help="Elimina"):
                     elimina_fenomeno(f["id"])
-                    st.rerun()
+                    st.rerun(scope="app")
 
     _mostra_ranking()
 

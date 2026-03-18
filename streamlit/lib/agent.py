@@ -1,11 +1,21 @@
 import anthropic
 import os
 import json
+import re
 from .database import get_messaggi, aggiungi_messaggio, aggiorna_scenario
 
-client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
 
 STEP_ORDINE = ["intro", "key_points", "narrativa", "titolo", "minacce", "opportunita", "concluso"]
+
+
+def _get_client():
+    """Crea il client Anthropic leggendo la chiave da secrets o env al momento della chiamata."""
+    try:
+        import streamlit as st
+        api_key = st.secrets.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_API_KEY", "")
+    except Exception:
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    return anthropic.Anthropic(api_key=api_key)
 
 
 def descrivi_quadrante(quadrante, d1_nome, d1_pos, d1_neg, d2_nome, d2_pos, d2_neg):
@@ -68,17 +78,30 @@ RISPOSTA in JSON:
 Se aggiornamenti non ha campi, metti null."""
 
 
+def _build_history(messaggi_db, testo_utente):
+    """
+    Costruisce la history per l'API Anthropic.
+    L'API richiede che il primo messaggio sia sempre 'user'.
+    Se la history dal DB inizia con 'assistant' (messaggio di benvenuto),
+    aggiungiamo un messaggio utente fittizio di apertura.
+    """
+    msgs = [{"role": m["ruolo"], "content": m["contenuto"]} for m in messaggi_db]
+    msgs.append({"role": "user", "content": testo_utente})
+
+    # Garantisce alternanza corretta user/assistant richiesta dall'API
+    if msgs and msgs[0]["role"] == "assistant":
+        msgs = [{"role": "user", "content": "[Sessione avviata]"}] + msgs
+
+    return msgs
+
+
 def invia_messaggio(scenario, sessione, testo_utente):
     """Invia un messaggio e ottieni la risposta dell'agente."""
     key_points = sessione.get("key_points", [])
     messaggi_db = get_messaggi(scenario["id"])
+    history = _build_history(messaggi_db, testo_utente)
 
-    # Costruisce history
-    history = [
-        {"role": m["ruolo"], "content": m["contenuto"]}
-        for m in messaggi_db
-    ]
-    history.append({"role": "user", "content": testo_utente})
+    client = _get_client()
 
     try:
         risposta = client.messages.create(
@@ -91,8 +114,6 @@ def invia_messaggio(scenario, sessione, testo_utente):
 
         # Prova a parsare JSON
         try:
-            json_match = None
-            import re
             m = re.search(r'\{[\s\S]*\}', testo_raw)
             if m:
                 parsed = json.loads(m.group())
@@ -114,7 +135,7 @@ def invia_messaggio(scenario, sessione, testo_utente):
 
         # Aggiorna scenario
         updates = {}
-        if nuovo_step:
+        if nuovo_step and nuovo_step in STEP_ORDINE:
             updates["step_corrente"] = nuovo_step
         if agg.get("narrativa"):
             updates["narrativa"] = agg["narrativa"]
@@ -133,8 +154,18 @@ def invia_messaggio(scenario, sessione, testo_utente):
 
         return testo_risposta, nuovo_step
 
+    except anthropic.AuthenticationError:
+        msg = "⚠️ Chiave API Anthropic non valida o non configurata. Contatta il facilitatore."
+        aggiungi_messaggio(scenario["id"], "assistant", msg)
+        return msg, None
+    except anthropic.APIConnectionError:
+        msg = "⚠️ Impossibile connettersi all'API. Verifica la connessione internet."
+        aggiungi_messaggio(scenario["id"], "assistant", msg)
+        return msg, None
     except Exception as e:
-        return f"Errore dell'agente: {str(e)}", None
+        msg = f"⚠️ Errore dell'agente: {str(e)}"
+        aggiungi_messaggio(scenario["id"], "assistant", msg)
+        return msg, None
 
 
 def avvia_scenario(scenario, sessione):
@@ -160,6 +191,8 @@ Il messaggio deve:
 
 Rispondi SOLO con il testo del messaggio, in italiano."""
 
+    client = _get_client()
+
     try:
         risposta = client.messages.create(
             model="claude-sonnet-4-6",
@@ -168,7 +201,13 @@ Rispondi SOLO con il testo del messaggio, in italiano."""
         )
         testo = risposta.content[0].text
     except Exception:
-        testo = f"Benvenuti allo Scenario {scenario['numero']}!\n\nLavorerete sul quadrante: **{descrizione}**\n\nIniziamo esplorando il primo key point. {key_points[0] if key_points else 'Come immaginate questo scenario?'}"
+        primo_kp = key_points[0] if key_points else "Come immaginate questo scenario?"
+        testo = (
+            f"Benvenuti allo Scenario {scenario['numero']}!\n\n"
+            f"Lavorerete sul quadrante: **{descrizione}**\n\n"
+            f"Insieme esploreremo: {kp_str}\n\n"
+            f"Iniziamo: {primo_kp}"
+        )
 
     aggiungi_messaggio(scenario["id"], "assistant", testo)
     aggiorna_scenario(scenario["id"], step_corrente="key_points")

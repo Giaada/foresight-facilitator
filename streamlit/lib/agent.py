@@ -64,11 +64,10 @@ ISTRUZIONI:
 - Sii specifico rispetto all'orizzonte temporale {sessione['frame_temporale']}
 
 REGOLE PER aggiornamenti (FONDAMENTALE - segui sempre):
-- Step narrativa: quando generi la narrativa, METTI SEMPRE il testo in aggiornamenti.narrativa
-- Step titolo: quando il titolo è confermato o scelto, METTI SEMPRE in aggiornamenti.titolo
-- Step minacce: ogni volta che hai una lista di minacce, METTI SEMPRE in aggiornamenti.minacce
-- Step opportunita: ogni volta che hai una lista di opportunità, METTI SEMPRE in aggiornamenti.opportunita
-- Step key_points: salva le risposte ricevute in aggiornamenti.key_points_data
+- Dato che sei in una chat interattiva, l'interfaccia utente si aggiorna in tempo reale SOLO SE fornisci il blocco aggiornamenti completo ad ogni singolo tuo messaggio. 
+- Ad OGNI tuo messaggio, produci sempre l'intero stato corrente compilato dentro l'oggetto 'aggiornamenti' (narrativa parziale/completa, minacce emerse finora, ecc.).
+- MANTIENI SEMPRE il testo dei turni precedenti nei vari campi, non svuotarli, ma semplicemente ammodionali.
+- Step key_points: salva/aggiungi tutte le risposte ricevute in aggiornamenti.key_points_data
 
 RISPOSTA - rispondi SOLO con questo JSON, senza testo prima o dopo:
 {{

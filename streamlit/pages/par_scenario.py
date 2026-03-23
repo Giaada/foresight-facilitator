@@ -92,16 +92,39 @@ if not sc:
 # Descrizione quadrante
 d1 = sessione.get("driver1_nome", "Driver 1")
 d2 = sessione.get("driver2_nome", "Driver 2")
-asse_x = (
-    sessione.get("driver1_pos") if sc["quadrante"][0] == "+" else sessione.get("driver1_neg")
-) or d1
-asse_y = (
-    sessione.get("driver2_pos") if sc["quadrante"][1] == "+" else sessione.get("driver2_neg")
-) or d2
+asse_x_pos = sessione.get("driver1_pos", "Alto")
+asse_x_neg = sessione.get("driver1_neg", "Basso")
+asse_y_pos = sessione.get("driver2_pos", "Alto")
+asse_y_neg = sessione.get("driver2_neg", "Basso")
 
-st.markdown(
-    f"**Gruppo {gruppo_numero}** — Scenario `{sc['quadrante']}`: {asse_x} × {asse_y}"
-)
+q_x = asse_x_pos if sc["quadrante"][0] == "+" else asse_x_neg
+q_y = asse_y_pos if sc["quadrante"][1] == "+" else asse_y_neg
+
+css_matrix = f"""
+<div style="background-color: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1.25rem; display: flex; flex-direction: row; gap: 2rem; align-items: center; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); margin-bottom: 20px;">
+  <div style="flex: 1; font-size: 0.875rem; color: #374151;">
+    <h3 style="font-size: 1rem; font-weight: bold; color: #312e81; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+      Bussola Scenario: Quadrante <span style="color: #4f46e5; background-color: #eef2ff; border: 1px solid #e0e7ff; padding: 0.125rem 0.5rem; border-radius: 0.25rem;">{sc['quadrante']}</span>
+    </h3>
+    <p style="line-height: 1.6; margin:0;">Il vostro gruppo sta attivamente esplorando l'incrocio tra <strong>{q_x}</strong> (sull'asse <em>{d1}</em>) e <strong>{q_y}</strong> (sull'asse <em>{d2}</em>).</p>
+  </div>
+  <div style="display: flex; flex-direction: column; align-items: center; flex-shrink: 0;">
+    <div style="font-size: 11px; font-weight: bold; color: #9ca3af; margin-bottom: 4px; text-transform: capitalize;">{asse_y_pos}</div>
+    <div style="display: flex; align-items: center;">
+      <div style="font-size: 11px; font-weight: bold; color: #9ca3af; margin-right: 8px; writing-mode: vertical-rl; transform: rotate(180deg); text-transform: capitalize;">{asse_x_neg}</div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; width: 100px; height: 100px; border: 3px solid #334155; background-color: #f8fafc; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);">
+        <div style="border-right: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: center; background-color: {'#4f46e5' if sc['quadrante'] == '-+' else 'transparent'}; color: {'white' if sc['quadrante'] == '-+' else 'transparent'}; font-size: 10px; font-weight: bold; opacity: 0.8;">- +</div>
+        <div style="border-bottom: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: center; background-color: {'#4f46e5' if sc['quadrante'] == '++' else 'transparent'}; color: {'white' if sc['quadrante'] == '++' else 'transparent'}; font-size: 10px; font-weight: bold; opacity: 0.8;">+ +</div>
+        <div style="border-right: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: center; background-color: {'#4f46e5' if sc['quadrante'] == '--' else 'transparent'}; color: {'white' if sc['quadrante'] == '--' else 'transparent'}; font-size: 10px; font-weight: bold; opacity: 0.8;">- -</div>
+        <div style="display: flex; align-items: center; justify-content: center; background-color: {'#4f46e5' if sc['quadrante'] == '+-' else 'transparent'}; color: {'white' if sc['quadrante'] == '+-' else 'transparent'}; font-size: 10px; font-weight: bold; opacity: 0.8;">+ -</div>
+      </div>
+      <div style="font-size: 11px; font-weight: bold; color: #9ca3af; margin-left: 8px; writing-mode: vertical-rl; text-transform: capitalize;">{asse_x_pos}</div>
+    </div>
+    <div style="font-size: 11px; font-weight: bold; color: #9ca3af; margin-top: 4px; text-transform: capitalize;">{asse_y_neg}</div>
+  </div>
+</div>
+"""
+st.markdown(css_matrix, unsafe_allow_html=True)
 
 col_chat, col_panel = st.columns([3, 2])
 
@@ -140,6 +163,9 @@ with col_chat:
             st.rerun()
     else:
         st.success("🎉 Scenario completato! Ottimo lavoro.")
+        st.info("Attendi che il facilitatore pubblichi il report PDF consolidato contenente le riflessioni di tutti i gruppi.")
+        if st.button("Torna alla vista principale", type="primary"):
+            st.rerun()
 
 # ── Pannello scenario in costruzione ─────────────────────
 with col_panel:

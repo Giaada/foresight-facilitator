@@ -1,6 +1,8 @@
 import streamlit as st
 import sys
 from pathlib import Path
+import markdown
+import streamlit.components.v1 as components
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -225,13 +227,78 @@ def genera_markdown():
 
 
 md = genera_markdown()
+html_content = markdown.markdown(md)
+
+pdf_html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+  body {{ font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 2px; color: #333; margin: 0; }}
+  #pdf-report-body {{ padding: 30px; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }}
+  #pdf-report-body h1 {{ color: #4F46E5; border-bottom: 2px solid #e0e7ff; padding-bottom: 15px; margin-bottom: 25px; }}
+  #pdf-report-body h2 {{ color: #312E81; margin-top: 35px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; }}
+  #pdf-report-body h3 {{ color: #4338CA; margin-top: 25px; }}
+  #pdf-report-body p, #pdf-report-body li {{ line-height: 1.7; font-size: 15px; }}
+  #pdf-report-body strong {{ color: #111827; }}
+  .btn {{ 
+    background-color: #4F46E5; color: white; padding: 12px 24px; 
+    border-radius: 8px; border: none; cursor: pointer; 
+    font-weight: 600; font-family: 'Segoe UI', sans-serif; font-size: 15px; 
+    width: 100%; text-align: center; transition: background 0.2s;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }}
+  .btn:hover {{ background-color: #4338CA; }}
+</style>
+</head>
+<body>
+
+<div id="pdf-content" style="display: none;">
+  <div id="pdf-report-body">
+    {html_content}
+  </div>
+</div>
+
+<button class="btn" onclick="
+  var btn = this;
+  var originalText = btn.innerHTML;
+  btn.innerHTML = '⚙️ Generazione PDF in corso...';
+  btn.style.backgroundColor = '#6B7280';
+  
+  var element = document.getElementById('pdf-content');
+  element.style.display = 'block';
+  
+  var opt = {{
+    margin: 15,
+    filename: 'Report_Scenario_Planning_#{sid}.pdf',
+    image: {{ type: 'jpeg', quality: 0.98 }},
+    html2canvas: {{ scale: 2, useCORS: true }},
+    jsPDF: {{ unit: 'mm', format: 'a4', orientation: 'portrait' }}
+  }};
+  
+  html2pdf().set(opt).from(element).save().then(function() {{
+    element.style.display = 'none';
+    btn.innerHTML = originalText;
+    btn.style.backgroundColor = '#4F46E5';
+  }});
+">
+  📥 Scarica Report Finale in PDF Reale
+</button>
+
+</body>
+</html>
+"""
+
+components.html(pdf_html, height=65)
+
 st.download_button(
-    label="📥 Scarica Report (Markdown)",
+    label="Scarica File Sorgente (Markdown grezzo)",
     data=md.encode("utf-8"),
     file_name=f"foresight_report_sessione_{sid}.md",
     mime="text/markdown",
     use_container_width=True,
-    type="primary",
 )
 
 with st.expander("Anteprima Markdown"):

@@ -66,9 +66,19 @@ elif ruolo == "partecipante":
             st.caption(f"📌 {domanda[:60]}{'...' if len(domanda) > 60 else ''}")
             st.caption(f"⏱️ {sessione['frame_temporale']}")
             
-            st.divider()
-            
             stato = sessione.get("stato", "setup")
+            
+            if stato in ("scenario_planning", "scenario_planning_gruppo", "concluso"):
+                from lib.database import get_partecipanti, get_scenari
+                plist = get_partecipanti(sessione["id"])
+                par_corrente = next((x for x in plist if x["id"] == p.get("id")), None)
+                if par_corrente and par_corrente.get("gruppo_numero"):
+                    slist = get_scenari(sessione["id"])
+                    scen = next((s for s in slist if s["numero"] == par_corrente["gruppo_numero"]), None)
+                    if scen and scen.get("quadrante"):
+                        st.caption(f"🧭 Quadrante: **{scen['quadrante']}**")
+            
+            st.divider()
             
             if stato == "horizon_scanning": idx = 0
             elif stato in ("transizione", "elaborazione_orizzonte", "definizione_driver"): idx = 1
@@ -81,6 +91,7 @@ elif ruolo == "partecipante":
                 "🔭 Horizon Scanning",
                 "⚙️ Elaborazione Assi",
                 "👤 Scenario Individuale",
+                "⚠️ Minacce e Opportunità",
                 "🤝 Discussione di Gruppo",
                 "📄 Report Finale"
             ]

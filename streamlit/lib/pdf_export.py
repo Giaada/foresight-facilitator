@@ -64,7 +64,7 @@ def st_scarica_pdf_scenario_individuale(scenario_indiv, sessione, nome_partecipa
     </style>
     </head>
     <body>
-    <div style="position: absolute; left: -9999px; top: 0; width: 800px; background-color: white;">
+    <div style="position: absolute; left: 0; top: 0; width: 800px; background-color: white; opacity: 0.01; z-index: -10; pointer-events: none;">
       <div id="{unique_id}">
         {html_content}
       </div>
@@ -81,7 +81,7 @@ def st_scarica_pdf_scenario_individuale(scenario_indiv, sessione, nome_partecipa
         margin: 15,
         filename: 'Scenario_{nome_partecipante}.pdf',
         image: {{ type: 'jpeg', quality: 0.98 }},
-        html2canvas: {{ scale: 2, useCORS: true, windowWidth: 800 }},
+        html2canvas: {{ scale: 2, useCORS: true, windowWidth: 800, x: 0, y: 0, scrollX: 0, scrollY: 0 }},
         jsPDF: {{ unit: 'mm', format: 'a4', orientation: 'portrait' }}
       }};
       
@@ -239,7 +239,7 @@ def st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti):
     </head>
     <body>
 
-    <div style="position: absolute; left: -9999px; top: 0; width: 800px; background-color: white;">
+    <div style="position: absolute; left: 0; top: 0; width: 800px; background-color: white; opacity: 0.01; z-index: -10; pointer-events: none;">
       <div id="pdf-report-body">
         {html_content}
       </div>
@@ -257,7 +257,7 @@ def st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti):
         margin: [15, 15, 15, 15],
         filename: 'Report_Scenario_Planning_#{sid}.pdf',
         image: {{ type: 'jpeg', quality: 0.98 }},
-        html2canvas: {{ scale: 2, useCORS: true, windowWidth: 800 }},
+        html2canvas: {{ scale: 2, useCORS: true, windowWidth: 800, x: 0, y: 0, scrollX: 0, scrollY: 0 }},
         jsPDF: {{ unit: 'mm', format: 'a4', orientation: 'portrait' }},
         pagebreak: {{ mode: ['avoid-all', 'css', 'legacy'] }}
       }};

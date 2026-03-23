@@ -133,49 +133,83 @@ st.markdown(css_matrix, unsafe_allow_html=True)
 
 
 if is_group_phase:
-    st.markdown("### 🤝 Bozza Consolidata Integrata")
-    st.success("Tutte le bozze dei partecipanti di questo gruppo sono state unificate.")
-    st.info("Qui sotto trovate le visioni integrate individualizzate. Utilizzate le somiglianze e differenze emerse per avviare una discussione produttiva.")
+    tab_gruppo, tab_personale = st.tabs(["🤝 Lavoro di Gruppo", "👤 Il Mio Lavoro Individuale"])
     
-    if sc.get("titolo"):
-        st.markdown(f"**🏷️ Titolo:** {sc['titolo']}")
+    with tab_gruppo:
+        st.markdown("### 🤝 Bozza Consolidata Integrata")
+        st.success("Tutte le bozze dei partecipanti di questo gruppo sono state unificate.")
+        st.info("Qui sotto trovate le visioni integrate individualizzate. Utilizzate le somiglianze e differenze emerse per avviare una discussione produttiva.")
         
-    st.markdown("#### 📖 Narrativa di Gruppo Integrata")
-    st.markdown(sc.get("narrativa", "Sintesi non disponibile."))
-    
-    kp_data = sc.get("key_points_data", {})
-    if isinstance(kp_data, dict):
-        p_com = kp_data.get("punti_comune", [])
-        divs = kp_data.get("divergenze", [])
-        if p_com or divs:
-            c_com, c_div = st.columns(2)
-            with c_com:
-                if p_com:
-                    st.success("**🤝 Cosa vi accomuna**\n\n" + "\n".join(f"- {x}" for x in p_com))
-            with c_div:
-                if divs:
-                    st.warning("**⚡ Idee uniche o divergenti**\n\n" + "\n".join(f"- {x}" for x in divs))
-    
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown("#### ⚠️ Minacce Emerse")
-        for m in sc.get("minacce", []):
-            st.markdown(f"- {m}")
-    with c2:
-        st.markdown("#### ✨ Opportunità Emerse")
-        for o in sc.get("opportunita", []):
-            st.markdown(f"- {o}")
+        if sc.get("titolo"):
+            st.markdown(f"**🏷️ Titolo:** {sc['titolo']}")
             
-    st.divider()
-    
-    if stato != "concluso":
-        st.info("Attendete l'avanzamento alla Dashboard Generale per scaricare i PDF finali.")
-        if st.button("🔄 Aggiorna Bozza"):
-            st.rerun()
-    else:
-        st.success("🎉 Sessione completamente terminata! Ottimo lavoro.")
-        if st.button("Torna alla vista principale", type="primary"):
-            st.rerun()
+        st.markdown("#### 📖 Narrativa di Gruppo Integrata")
+        st.markdown(sc.get("narrativa", "Sintesi non disponibile."))
+        
+        kp_data = sc.get("key_points_data", {})
+        if isinstance(kp_data, dict):
+            p_com = kp_data.get("punti_comune", [])
+            divs = kp_data.get("divergenze", [])
+            if p_com or divs:
+                c_com, c_div = st.columns(2)
+                with c_com:
+                    if p_com:
+                        st.success("**🤝 Cosa vi accomuna**\n\n" + "\n".join(f"- {x}" for x in p_com))
+                with c_div:
+                    if divs:
+                        st.warning("**⚡ Idee uniche o divergenti**\n\n" + "\n".join(f"- {x}" for x in divs))
+        
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("#### ⚠️ Minacce Emerse")
+            for m in sc.get("minacce", []):
+                st.markdown(f"- {m}")
+        with c2:
+            st.markdown("#### ✨ Opportunità Emerse")
+            for o in sc.get("opportunita", []):
+                st.markdown(f"- {o}")
+                
+        st.divider()
+        
+        if stato != "concluso":
+            st.info("Attendete l'avanzamento alla Dashboard Generale per scaricare i PDF finali.")
+            if st.button("🔄 Aggiorna Bozza"):
+                st.rerun()
+        else:
+            st.success("🎉 Sessione completamente terminata! Ottimo lavoro.")
+            if st.button("Torna alla vista principale", type="primary"):
+                st.rerun()
+
+    with tab_personale:
+        sc_indiv = get_scenario_individuale(sessione_id, partecipante_id)
+        if not sc_indiv:
+            st.info("Nessun lavoro individuale trovato.")
+        else:
+            from lib.pdf_export import st_scarica_pdf_scenario_individuale
+            st.markdown("### 📝 Il Tuo Scenario Personale")
+            st.info("Questo è il lavoro che hai sviluppato individualmente con l'agente. Rimane accessibile per aiutarti durante la discussione di gruppo.")
+            st_scarica_pdf_scenario_individuale(sc_indiv, sessione, nome)
+            st.divider()
+            
+            if sc_indiv.get("titolo"):
+                st.markdown(f"**🏷️ Titolo:** {sc_indiv['titolo']}")
+            if sc_indiv.get("narrativa"):
+                st.markdown("**Bozza:**")
+                st.markdown(sc_indiv["narrativa"])
+            
+            if sc_indiv.get("minacce") or sc_indiv.get("opportunita"):
+                c1, c2 = st.columns(2)
+                with c1:
+                    if sc_indiv.get("minacce"):
+                        st.markdown("**⚠️ Minacce:**\n" + "\n".join(f"- {m}" for m in sc_indiv["minacce"]))
+                with c2:
+                    if sc_indiv.get("opportunita"):
+                        st.markdown("**✨ Opportunità:**\n" + "\n".join(f"- {o}" for o in sc_indiv["opportunita"]))
+                        
+            if sc_indiv.get("key_points_data"):
+                st.markdown("**Key Points esplorati:**")
+                for kp, risposta in sc_indiv["key_points_data"].items():
+                    st.markdown(f"- **{kp}:** {risposta}")
 
 else:
     col_chat, col_panel = st.columns([3, 2])

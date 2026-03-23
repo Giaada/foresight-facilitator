@@ -180,6 +180,26 @@ elif stato in ("scenario_planning_gruppo", "concluso"):
                 if st.button("Salva titolo", key=f"btn_t_{sc_g['id']}"):
                     aggiorna_scenario(sc_g["id"], titolo=titolo_edit)
                     st.rerun()
+            
+            st.divider()
+            
+            # Show individual components for this group
+            indivs = [s for s in scenari_individuali if s["numero"] == sc_g["numero"]]
+            if indivs:
+                st.markdown("#### 👤 Lavori Individuali dei Membri")
+                for s_ind in indivs:
+                    nome_par = par_map.get(s_ind["partecipante_id"], "Sconosciuto")
+                    with st.expander(f"Lavoro di {nome_par}"):
+                        from lib.pdf_export import st_scarica_pdf_scenario_individuale
+                        st_scarica_pdf_scenario_individuale(s_ind, sessione, nome_par)
+                        
+                        st.markdown(f"**Titolo:** {s_ind.get('titolo', 'Non definito')}")
+                        if s_ind.get("narrativa"):
+                            st.markdown(f"**Bozza:** {s_ind['narrativa']}")
+                        if s_ind.get("minacce"):
+                            st.markdown("**Minacce:** " + ", ".join(s_ind["minacce"]))
+                        if s_ind.get("opportunita"):
+                            st.markdown("**Opportunità:** " + ", ".join(s_ind["opportunita"]))
 
     st.divider()
     if stato != "concluso":

@@ -259,6 +259,16 @@ if is_group_phase:
                 st.rerun()
         else:
             st.success("🎉 Sessione completamente terminata! Ottimo lavoro.")
+            st.info("Qui sotto puoi scaricare il Report Finale completo con tutti gli scenari discussi oggi.")
+            
+            from lib.database import get_fenomeni, get_voti_aggregati
+            from lib.pdf_export import st_scarica_pdf_report_finale
+            
+            fenomeni = get_fenomeni(sessione_id)
+            voti = get_voti_aggregati(sessione_id)
+            st_scarica_pdf_report_finale(sessione, get_scenari(sessione_id), fenomeni, voti)
+            
+            st.divider()
             if st.button("Torna alla vista principale", type="primary"):
                 st.rerun()
 

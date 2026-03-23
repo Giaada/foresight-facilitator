@@ -25,16 +25,16 @@ def st_scarica_pdf_scenario_individuale(scenario_indiv, sessione, nome_partecipa
         lines.append("")
 
     if scenario_indiv.get("minacce"):
-        lines.append("### ⚠️ Minacce")
+        lines.append("<div class='box minacce'><h4>⚠️ Minacce</h4><ul>")
         for m in scenario_indiv["minacce"]:
-            lines.append(f"- {m}")
-        lines.append("")
+            lines.append(f"<li>{m}</li>")
+        lines.append("</ul></div>")
         
     if scenario_indiv.get("opportunita"):
-        lines.append("### ✨ Opportunità")
+        lines.append("<div class='box opportunita'><h4>✨ Opportunità</h4><ul>")
         for o in scenario_indiv["opportunita"]:
-            lines.append(f"- {o}")
-        lines.append("")
+            lines.append(f"<li>{o}</li>")
+        lines.append("</ul></div>")
 
     md = "\n".join(lines)
     html_content = markdown.markdown(md)
@@ -53,6 +53,17 @@ def st_scarica_pdf_scenario_individuale(scenario_indiv, sessione, nome_partecipa
       #{unique_id} h1 {{ color: #4F46E5; border-bottom: 2px solid #e0e7ff; padding-bottom: 10px; margin-bottom: 20px; }}
       #{unique_id} h3 {{ color: #4338CA; margin-top: 20px; }}
       #{unique_id} p, #{unique_id} li {{ line-height: 1.6; font-size: 14px; position: relative; z-index: 1; }}
+      .box {{ padding: 15px; margin-top: 15px; margin-bottom: 15px; border-radius: 8px; border-left: 5px solid; }}
+      .box h4 {{ margin-top: 0 !important; margin-bottom: 10px; font-size: 16px; padding-bottom: 5px; }}
+      .box ul {{ margin-bottom: 0; padding-left: 20px; }}
+      .box.minacce {{ background-color: #FEF2F2; border-left-color: #EF4444; }}
+      .box.minacce h4 {{ color: #991B1B !important; }}
+      .box.opportunita {{ background-color: #ECFDF5; border-left-color: #10B981; }}
+      .box.opportunita h4 {{ color: #065F46 !important; }}
+      .box.comune {{ background-color: #EFF6FF; border-left-color: #3B82F6; }}
+      .box.comune h4 {{ color: #1E3A8A !important; }}
+      .box.divergenze {{ background-color: #FEFCE8; border-left-color: #EAB308; }}
+      .box.divergenze h4 {{ color: #854D0E !important; }}
       .btn {{ 
         background-color: #10B981; color: white; padding: 10px 20px; 
         border-radius: 8px; border: none; cursor: pointer; 
@@ -158,13 +169,13 @@ def st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti):
                 lines += [f"", n_fin]
             
             if m_fin:
-                lines.append("")
-                lines.append("**Minacce:**")
-                for m in m_fin: lines.append(f"- {m}")
+                lines.append("<div class='box minacce'><h4>⚠️ Minacce</h4><ul>")
+                for m in m_fin: lines.append(f"<li>{m}</li>")
+                lines.append("</ul></div>")
             if o_fin:
-                lines.append("")
-                lines.append("**Opportunità:**")
-                for o in o_fin: lines.append(f"- {o}")
+                lines.append("<div class='box opportunita'><h4>✨ Opportunità</h4><ul>")
+                for o in o_fin: lines.append(f"<li>{o}</li>")
+                lines.append("</ul></div>")
                 
             lines.append("")
             lines.append("---")
@@ -186,26 +197,26 @@ def st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti):
                         lines.append(f"- **{k}:** {v}")
                 
                 if p_com:
-                    lines.append("")
-                    lines.append("**🤝 Punti in Comune:**")
-                    for x in p_com: lines.append(f"- {x}")
+                    lines.append("<div class='box comune'><h4>🤝 Punti in Comune</h4><ul>")
+                    for x in p_com: lines.append(f"<li>{x}</li>")
+                    lines.append("</ul></div>")
                     
                 if divs:
-                    lines.append("")
-                    lines.append("**⚡ Divergenze Emerse:**")
-                    for x in divs: lines.append(f"- {x}")
+                    lines.append("<div class='box divergenze'><h4>⚡ Divergenze Emerse</h4><ul>")
+                    for x in divs: lines.append(f"<li>{x}</li>")
+                    lines.append("</ul></div>")
         
         if not has_final:
             if sc.get("minacce"):
-                lines.append("")
-                lines.append("**Minacce:**")
+                lines.append("<div class='box minacce'><h4>⚠️ Minacce</h4><ul>")
                 for m in sc["minacce"]:
-                    lines.append(f"- {m}")
+                    lines.append(f"<li>{m}</li>")
+                lines.append("</ul></div>")
             if sc.get("opportunita"):
-                lines.append("")
-                lines.append("**Opportunità:**")
+                lines.append("<div class='box opportunita'><h4>✨ Opportunità</h4><ul>")
                 for o in sc["opportunita"]:
-                    lines.append(f"- {o}")
+                    lines.append(f"<li>{o}</li>")
+                lines.append("</ul></div>")
 
     md = "\n".join(lines)
     html_content = markdown.markdown(md)
@@ -227,6 +238,17 @@ def st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti):
       #pdf-report-body strong {{ color: #111827; }}
       #pdf-report-body blockquote {{ border-left: 4px solid #4F46E5; padding-left: 15px; margin-left: 0; padding-top: 5px; padding-bottom: 5px; color: #4B5563; font-style: italic; background-color: #F3F4F6; border-radius: 4px; }}
       .page-break {{ page-break-before: always; }}
+      .box {{ padding: 15px; margin-top: 15px; margin-bottom: 15px; border-radius: 8px; border-left: 5px solid; page-break-inside: avoid; }}
+      .box h4 {{ margin-top: 0 !important; margin-bottom: 10px; font-size: 16px; padding-bottom: 5px; }}
+      .box ul {{ margin-bottom: 0; padding-left: 20px; }}
+      .box.minacce {{ background-color: #FEF2F2; border-left-color: #EF4444; }}
+      .box.minacce h4 {{ color: #991B1B !important; }}
+      .box.opportunita {{ background-color: #ECFDF5; border-left-color: #10B981; }}
+      .box.opportunita h4 {{ color: #065F46 !important; }}
+      .box.comune {{ background-color: #EFF6FF; border-left-color: #3B82F6; }}
+      .box.comune h4 {{ color: #1E3A8A !important; }}
+      .box.divergenze {{ background-color: #FEFCE8; border-left-color: #EAB308; }}
+      .box.divergenze h4 {{ color: #854D0E !important; }}
       .btn {{ 
         background-color: #4F46E5; color: white; padding: 12px 24px; 
         border-radius: 8px; border: none; cursor: pointer; 

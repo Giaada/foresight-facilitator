@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Send, Bot, User } from "lucide-react";
+import { Send, Bot, User, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import type { Socket } from "socket.io-client";
@@ -45,6 +45,8 @@ export function VistaScenarioPlanningGruppo({ partecipante, sessioneId, socket, 
   const [scenarioOutput, setScenarioOutput] = useState<ScenarioOutput | null>(null);
   const [pannelloAperto, setPannelloAperto] = useState(false);
   const [caricando, setCaricando] = useState(true);
+  const [quadrante, setQuadrante] = useState<string | null>(null);
+  const [driverInfo, setDriverInfo] = useState<any>(null);
   const chatRef = useRef<HTMLDivElement>(null);
 
   const caricaGruppo = useCallback(async () => {
@@ -52,6 +54,15 @@ export function VistaScenarioPlanningGruppo({ partecipante, sessioneId, socket, 
     if (!res.ok) return;
     const data = await res.json();
     setGruppoId(data.gruppo.id);
+    setQuadrante(data.gruppo.quadrante);
+    setDriverInfo({
+      d1Nome: data.sessione.driver1Nome,
+      d1Pos: data.sessione.driver1PosPolo,
+      d1Neg: data.sessione.driver1NegPolo,
+      d2Nome: data.sessione.driver2Nome,
+      d2Pos: data.sessione.driver2PosPolo,
+      d2Neg: data.sessione.driver2NegPolo,
+    });
     setStepCorrente(data.gruppo.stepCorrente);
     setMessaggi(data.gruppo.messaggi || []);
     if (data.gruppo.scenarioOutput) setScenarioOutput(data.gruppo.scenarioOutput);
@@ -160,6 +171,54 @@ export function VistaScenarioPlanningGruppo({ partecipante, sessioneId, socket, 
         </div>
       </div>
 
+      {/* Riquadro Matrice 2x2 */}
+      {quadrante && driverInfo && (
+        <div className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col md:flex-row items-center gap-8 shadow-sm">
+          {/* Spiegazione testuale */}
+          <div className="flex-1 text-sm text-gray-700">
+            <h3 className="text-base font-bold text-indigo-900 mb-2 flex items-center gap-2">
+              Bussola Scenario: Quadrante <span className="text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded shadow-sm">{quadrante}</span>
+            </h3>
+            <p className="leading-relaxed">
+              Il vostro gruppo sta attivamente esplorando l&apos;incrocio tra <strong>{quadrante[0] === '+' ? (driverInfo.d1Pos || 'Alto') : (driverInfo.d1Neg || 'Basso')}</strong> (sull&apos;asse <em>{driverInfo.d1Nome || 'X'}</em>) 
+              e <strong>{quadrante[1] === '+' ? (driverInfo.d2Pos || 'Alto') : (driverInfo.d2Neg || 'Basso')}</strong> (sull&apos;asse <em>{driverInfo.d2Nome || 'Y'}</em>).
+            </p>
+            <p className="text-xs text-gray-500 mt-3 italic">L&apos;agente vi guiderà a delineare come potrebbe apparire un mondo in cui queste due condizioni si avverano contemporaneamente.</p>
+          </div>
+          
+          {/* Griglia Visiva (Compass) */}
+          <div className="shrink-0 flex flex-col items-center">
+            {/* Label Y Alto */}
+            <div className="text-[11px] font-bold text-gray-400 capitalize mb-1">{driverInfo.d2Pos || 'Alto'}</div>
+            <div className="flex items-center">
+              {/* Label X Sinistra */}
+              <div className="text-[11px] font-bold text-gray-400 capitalize mr-2 rotate-180" style={{ writingMode: 'vertical-rl' }}>{driverInfo.d1Neg || 'Basso'}</div>
+              
+              {/* Matrice */}
+              <div className="grid grid-cols-2 grid-rows-2 w-28 h-28 border-[3px] border-slate-700 bg-slate-50 relative shadow-sm">
+                <div className={`border-r border-b border-slate-300 flex items-center justify-center transition-colors ${quadrante === '-+' ? 'bg-indigo-600 text-white shadow-inner' : ''}`}>
+                  <span className="opacity-50 text-[10px] font-mono tracking-tighter">- +</span>
+                </div>
+                <div className={`border-b border-slate-300 flex items-center justify-center transition-colors ${quadrante === '++' ? 'bg-indigo-600 text-white shadow-inner' : ''}`}>
+                  <span className="opacity-50 text-[10px] font-mono tracking-tighter">+ +</span>
+                </div>
+                <div className={`border-r border-slate-300 flex items-center justify-center transition-colors ${quadrante === '--' ? 'bg-indigo-600 text-white shadow-inner' : ''}`}>
+                  <span className="opacity-50 text-[10px] font-mono tracking-tighter">- -</span>
+                </div>
+                <div className={`flex items-center justify-center transition-colors ${quadrante === '+-' ? 'bg-indigo-600 text-white shadow-inner' : ''}`}>
+                  <span className="opacity-50 text-[10px] font-mono tracking-tighter">+ -</span>
+                </div>
+              </div>
+              
+              {/* Label X Destra */}
+              <div className="text-[11px] font-bold text-gray-400 capitalize ml-2" style={{ writingMode: 'vertical-rl' }}>{driverInfo.d1Pos || 'Alto'}</div>
+            </div>
+            {/* Label Y Basso */}
+            <div className="text-[11px] font-bold text-gray-400 capitalize mt-1">{driverInfo.d2Neg || 'Basso'}</div>
+          </div>
+        </div>
+      )}
+
       {/* Pannello scenario in costruzione */}
       {pannelloAperto && scenarioOutput && (
         <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 space-y-3 text-sm">
@@ -246,9 +305,17 @@ export function VistaScenarioPlanningGruppo({ partecipante, sessioneId, socket, 
         {/* Input */}
         <div className={`border-t border-gray-100 p-3 ${completato ? "bg-gray-50" : ""}`}>
           {completato ? (
-            <p className="text-center text-sm text-green-600 py-1">
-              Scenario completato! Attendete le istruzioni del facilitatore.
-            </p>
+            <div className="flex flex-col items-center gap-3 py-4">
+              <p className="text-center text-sm font-medium text-green-600">
+                🎉 Percorso completato! Avete costruito con successo il vostro scenario.
+              </p>
+              <a 
+                href={`/report?sessioneId=${sessioneId}`}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 transition-all"
+              >
+                 <LayoutDashboard size={18} /> Vedi Recap di Tutti i Gruppi
+              </a>
+            </div>
           ) : (
             <div className="flex gap-2">
               <input

@@ -72,14 +72,14 @@ Rispondi SEMPRE con un JSON in questo formato:
   "testo": "il messaggio da mostrare al gruppo",
   "nuovoStep": "solo se stai avanzando di step, altrimenti null",
   "outputAggiornato": {
-    "narrativa": "solo se hai generato/aggiornato la narrativa",
-    "titolo": "solo se il titolo è stato confermato",
-    "minacce": ["array", "solo", "se", "aggiornato"],
-    "opportunita": ["array", "solo", "se", "aggiornato"],
+    "narrativa": "testo della narrativa in elaborazione",
+    "titolo": "titolo (se definito)",
+    "minacce": ["eventuali", "minacce", "emerse"],
+    "opportunita": ["eventuali", "opportunità", "emerse"],
     "keyPointsData": {"nome_keypoint": "risposta_consolidata"}
   }
 }
-Se outputAggiornato non ha campi da aggiornare, metti null.`;
+IMPORTANTE: Compila sempre in 'outputAggiornato' tutti i campi che stai via via definendo con il gruppo. Aggiorna questi campi non appena emergono spunti utili dalle risposte del gruppo, in modo che il report visivo si aggiorni in tempo reale lungo tutta la sessione. Se un campo non è ancora stato affrontato, può essere omesso o lasciato a null.`;
 
   // Costruisce la history dei messaggi
   const history = gruppo.messaggi.map((m: { ruolo: string; contenuto: string }) => ({

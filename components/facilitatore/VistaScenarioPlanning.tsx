@@ -34,6 +34,7 @@ interface Gruppo {
 
 interface Props {
   dati: {
+    id: string;
     stato: string;
     gruppi: Gruppo[];
     driver1Nome?: string | null;
@@ -84,7 +85,7 @@ export function VistaScenarioPlanning({ dati, onChiudiSessione, onAggiorna }: Pr
             </Button>
           )}
           {dati.stato === "concluso" && (
-            <a href={`/report`}>
+            <a href={`/report?sessioneId=${dati.id}`}>
               <Button variante="secondary">
                 <FileText size={15} className="mr-1.5" /> Vedi Report
               </Button>

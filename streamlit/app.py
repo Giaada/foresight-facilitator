@@ -65,6 +65,57 @@ elif ruolo == "partecipante":
             domanda = sessione["domanda_ricerca"]
             st.caption(f"📌 {domanda[:60]}{'...' if len(domanda) > 60 else ''}")
             st.caption(f"⏱️ {sessione['frame_temporale']}")
+            
+            st.divider()
+            
+            stato = sessione.get("stato", "setup")
+            
+            if stato == "horizon_scanning": idx = 0
+            elif stato in ("transizione", "elaborazione_orizzonte", "definizione_driver"): idx = 1
+            elif stato == "scenario_planning": idx = 2
+            elif stato == "scenario_planning_gruppo": idx = 3
+            elif stato == "concluso": idx = 4
+            else: idx = -1
+            
+            fasi = [
+                "🔭 Horizon Scanning",
+                "⚙️ Elaborazione Assi",
+                "👤 Scenario Individuale",
+                "🤝 Discussione di Gruppo",
+                "📄 Report Finale"
+            ]
+            
+            stepper_html = """
+            <style>
+            .stepper { list-style: none; padding: 0; margin: 10px 0 20px 5px; }
+            .stepper li { position: relative; padding-left: 28px; margin-bottom: 24px; color: #6B7280; font-size: 14px; font-weight: 500;}
+            .stepper li.active { color: #4F46E5; font-weight: 700; }
+            .stepper li.done { color: #10B981; }
+            .stepper li::before {
+              content: ''; position: absolute; left: 0; top: 4px; width: 12px; height: 12px;
+              border-radius: 50%; background: white; border: 2px solid #D1D5DB; z-index: 2;
+            }
+            .stepper li.active::before { border-color: #4F46E5; background: #4F46E5; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2); }
+            .stepper li.done::before { border-color: #10B981; background: #10B981; }
+            .stepper li:not(:last-child)::after {
+              content: ''; position: absolute; left: 5px; top: 16px; bottom: -24px;
+              width: 2px; background: #E5E7EB; z-index: 1;
+            }
+            .stepper li.done:not(:last-child)::after { background: #10B981; }
+            </style>
+            <ul class="stepper">
+            """
+            
+            for i, f in enumerate(fasi):
+                css_class = ""
+                if i < idx: css_class = "done"
+                elif i == idx: css_class = "active"
+                stepper_html += f'<li class="{css_class}">{f}</li>'
+            stepper_html += "</ul>"
+            
+            st.markdown(stepper_html, unsafe_allow_html=True)
+            st.divider()
+
         if st.button("Esci"):
             st.session_state.clear()
             st.rerun()

@@ -12,8 +12,13 @@ def st_scarica_pdf_scenario_individuale(scenario_indiv, sessione, nome_partecipa
         f"",
     ]
     if scenario_indiv.get("titolo"):
-        lines.append(f"### {scenario_indiv['titolo']}")
-        lines.append("")
+        lines += [
+            f"<div class='scenario-title-box'>",
+            f"  <span class='scenario-label'>Scenario {scenario_indiv['numero']}</span>",
+            f"  <h2 class='scenario-name'>{scenario_indiv['titolo']}</h2>",
+            f"</div>",
+            f""
+        ]
     if scenario_indiv.get("narrativa"):
         lines.append(scenario_indiv["narrativa"])
         lines.append("")
@@ -64,6 +69,14 @@ def st_scarica_pdf_scenario_individuale(scenario_indiv, sessione, nome_partecipa
       .box.comune h4 {{ color: #1E3A8A !important; }}
       .box.divergenze {{ background-color: #FEFCE8; border-left-color: #EAB308; }}
       .box.divergenze h4 {{ color: #854D0E !important; }}
+      .scenario-title-box {{ background-color: #E0F2FE; border: 2px solid #0284C7; border-radius: 8px; padding: 15px 20px; margin-top: 20px; margin-bottom: 25px; text-align: center; page-break-after: avoid; }}
+      .scenario-label {{ display: block; font-size: 14px; font-weight: 700; color: #0369A1; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }}
+      .scenario-name {{ color: #0C4A6E !important; margin: 0 !important; padding: 0 !important; border: none !important; font-size: 24px; }}
+      .scenario-quadrant {{ display: inline-block; margin-top: 10px; background-color: #BAE6FD; color: #075985; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 600; }}
+      .toc {{ list-style: none; padding-left: 0; margin-bottom: 30px; page-break-after: always; }}
+      .toc li {{ margin-bottom: 10px; padding: 12px; background-color: #F8FAFC; border-left: 4px solid #94A3B8; border-radius: 4px; }}
+      .toc a {{ text-decoration: none; color: #334155; font-size: 16px; display: block; }}
+      .toc a:hover {{ color: #2563EB; }}
       .btn {{ 
         background-color: #10B981; color: white; padding: 10px 20px; 
         border-radius: 8px; border: none; cursor: pointer; 
@@ -140,7 +153,14 @@ def st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti):
         lines.append(f"{pos}. {testo}{avg_str}")
 
     lines.append("")
-    lines.append("## Scenari")
+    lines.append("## Indice degli Scenari")
+    lines.append("<ul class='toc'>")
+    for sc in scenari:
+        t_fin = sc.get("titolo_finale")
+        titolo_orig = sc.get("titolo") or f"Scenario {sc['numero']}"
+        titolo_disp = t_fin if t_fin else titolo_orig
+        lines.append(f"<li><a href='#scenario-{sc['numero']}'><strong>Scenario {sc['numero']}</strong>: {titolo_disp}</a></li>")
+    lines.append("</ul>")
 
     for sc in scenari:
         titolo_orig = sc.get("titolo") or f"Scenario {sc['numero']}"
@@ -155,7 +175,11 @@ def st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti):
         lines += [
             f"",
             f"<div class='page-break'></div>",
-            f"### {titolo_disp} (Quadrante `{sc['quadrante']}`)",
+            f"<div class='scenario-title-box' id='scenario-{sc['numero']}'>",
+            f"  <span class='scenario-label'>Scenario {sc['numero']}</span>",
+            f"  <h2 class='scenario-name'>{titolo_disp}</h2>",
+            f"  <span class='scenario-quadrant'>Quadrante: {sc['quadrante']}</span>",
+            f"</div>",
         ]
         
         if has_final:
@@ -249,6 +273,14 @@ def st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti):
       .box.comune h4 {{ color: #1E3A8A !important; }}
       .box.divergenze {{ background-color: #FEFCE8; border-left-color: #EAB308; }}
       .box.divergenze h4 {{ color: #854D0E !important; }}
+      .scenario-title-box {{ background-color: #E0F2FE; border: 2px solid #0284C7; border-radius: 8px; padding: 15px 20px; margin-top: 20px; margin-bottom: 25px; text-align: center; page-break-after: avoid; }}
+      .scenario-label {{ display: block; font-size: 14px; font-weight: 700; color: #0369A1; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }}
+      .scenario-name {{ color: #0C4A6E !important; margin: 0 !important; padding: 0 !important; border: none !important; font-size: 24px; }}
+      .scenario-quadrant {{ display: inline-block; margin-top: 10px; background-color: #BAE6FD; color: #075985; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 600; }}
+      .toc {{ list-style: none; padding-left: 0; margin-bottom: 30px; page-break-after: always; }}
+      .toc li {{ margin-bottom: 10px; padding: 12px; background-color: #F8FAFC; border-left: 4px solid #94A3B8; border-radius: 4px; }}
+      .toc a {{ text-decoration: none; color: #334155; font-size: 16px; display: block; }}
+      .toc a:hover {{ color: #2563EB; }}
       .btn {{ 
         background-color: #4F46E5; color: white; padding: 12px 24px; 
         border-radius: 8px; border: none; cursor: pointer; 
@@ -281,7 +313,8 @@ def st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti):
         image: {{ type: 'jpeg', quality: 0.98 }},
         html2canvas: {{ scale: 2, useCORS: true, windowWidth: 800, x: 0, y: 0, scrollX: 0, scrollY: 0 }},
         jsPDF: {{ unit: 'mm', format: 'a4', orientation: 'portrait' }},
-        pagebreak: {{ mode: ['avoid-all', 'css', 'legacy'] }}
+        pagebreak: {{ mode: ['avoid-all', 'css', 'legacy'] }},
+        enableLinks: true
       }};
       
       html2pdf().set(opt).from(element).save().then(function() {{

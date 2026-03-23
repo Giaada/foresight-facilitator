@@ -19,6 +19,14 @@ def init_db():
         conn.execute("ALTER TABLE scenario ADD COLUMN partecipante_id INTEGER REFERENCES partecipante(id)")
     except Exception:
         pass
+    try:
+        conn.execute("ALTER TABLE scenario ADD COLUMN locked_by_partecipante_id INTEGER REFERENCES partecipante(id)")
+        conn.execute("ALTER TABLE scenario ADD COLUMN titolo_finale TEXT")
+        conn.execute("ALTER TABLE scenario ADD COLUMN narrativa_finale TEXT")
+        conn.execute("ALTER TABLE scenario ADD COLUMN minacce_finale TEXT DEFAULT '[]'")
+        conn.execute("ALTER TABLE scenario ADD COLUMN opportunita_finale TEXT DEFAULT '[]'")
+    except Exception:
+        pass
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS sessione (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -351,14 +359,13 @@ def _parse_scenario(row):
     if not row:
         return None
     d = dict(row)
-    try:
-        d["minacce"] = json.loads(d["minacce"] or "[]")
-    except Exception:
-        d["minacce"] = []
-    try:
-        d["opportunita"] = json.loads(d["opportunita"] or "[]")
-    except Exception:
-        d["opportunita"] = []
+    for field in ["minacce", "opportunita", "minacce_finale", "opportunita_finale"]:
+        try:
+            val = d.get(field)
+            d[field] = json.loads(val) if val else []
+        except Exception:
+            d[field] = []
+            
     try:
         d["key_points_data"] = json.loads(d["key_points_data"] or "{}")
     except Exception:
@@ -410,7 +417,7 @@ def get_scenario(scenario_id):
 def aggiorna_scenario(scenario_id, **kwargs):
     if not kwargs:
         return
-    for k in ["minacce", "opportunita", "key_points_data"]:
+    for k in ["minacce", "opportunita", "key_points_data", "minacce_finale", "opportunita_finale"]:
         if k in kwargs and not isinstance(kwargs[k], str):
             kwargs[k] = json.dumps(kwargs[k], ensure_ascii=False)
     fields = ", ".join(f"{k} = ?" for k in kwargs)

@@ -148,8 +148,10 @@ elif stato in ("scenario_planning_gruppo", "concluso"):
             asse_y = (sessione.get("driver2_pos") if sc_g["quadrante"][1] == "+" else sessione.get("driver2_neg")) or d2
             st.markdown(f"**Quadrante:** `{sc_g['quadrante']}` — {asse_x} × {asse_y}")
 
-            col_info, col_edit = st.columns([3, 2])
-            with col_info:
+            col_orig, col_final = st.columns(2)
+            
+            with col_orig:
+                st.markdown("### 🤖 Versione Originaria (AI)")
                 if sc_g.get("narrativa"):
                     with st.container(border=True):
                         st.markdown("**Bozza Integrata**")
@@ -174,12 +176,33 @@ elif stato in ("scenario_planning_gruppo", "concluso"):
                         st.markdown("**✨ Opportunità Emerse**")
                         for o in sc_g["opportunita"]:
                             st.markdown(f"- {o}")
-            with col_edit:
-                st.markdown("**Modifica manuale Titolo**")
-                titolo_edit = st.text_input("Titolo scenario", value=sc_g.get("titolo") or "", key=f"t_{sc_g['id']}")
-                if st.button("Salva titolo", key=f"btn_t_{sc_g['id']}"):
-                    aggiorna_scenario(sc_g["id"], titolo=titolo_edit)
-                    st.rerun()
+                            
+            with col_final:
+                st.markdown("### 🧠 Versione Definitiva (Gruppo)")
+                
+                t_fin = sc_g.get("titolo_finale")
+                n_fin = sc_g.get("narrativa_finale")
+                m_fin = sc_g.get("minacce_finale")
+                o_fin = sc_g.get("opportunita_finale")
+                
+                if not any([t_fin, n_fin, m_fin, o_fin]):
+                    st.info("Il gruppo non ha ancora iniziato a plasmare una versione separata rispetto a quella dell'Agente.")
+                else:
+                    with st.container(border=True):
+                        if t_fin: st.markdown(f"**Titolo:** {t_fin}")
+                        if n_fin: st.markdown(f"**Bozza:**\n{n_fin}")
+                        
+                        c_m, c_o = st.columns(2)
+                        with c_m:
+                            if m_fin: st.markdown("**⚠️ Minacce:**\n" + "\n".join(f"- {x}" for x in m_fin))
+                        with c_o:
+                            if o_fin: st.markdown("**✨ Opportunità:**\n" + "\n".join(f"- {x}" for x in o_fin))
+
+                locked_by = sc_g.get("locked_by_partecipante_id")
+                if locked_by:
+                    locker = next((p for p in partecipanti if p["id"] == locked_by), None)
+                    nome_locker = locker["nome"] if locker else "Un partecipante"
+                    st.warning(f"🔒 **{nome_locker}** è il relatore attivo e sta modificando in questo momento.")
             
             st.divider()
             

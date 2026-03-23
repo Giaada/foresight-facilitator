@@ -200,11 +200,43 @@ def genera_markdown():
     lines.append("## Scenari")
 
     for sc in scenari:
-        titolo = sc.get("titolo") or f"Scenario {sc['numero']}"
+        titolo_orig = sc.get("titolo") or f"Scenario {sc['numero']}"
+        t_fin = sc.get("titolo_finale")
+        n_fin = sc.get("narrativa_finale")
+        m_fin = sc.get("minacce_finale")
+        o_fin = sc.get("opportunita_finale")
+        
+        has_final = any([t_fin, n_fin, m_fin, o_fin])
+        titolo_disp = t_fin if t_fin else titolo_orig
+
         lines += [
             f"",
-            f"### {titolo} (Quadrante `{sc['quadrante']}`)",
+            f"### {titolo_disp} (Quadrante `{sc['quadrante']}`)",
         ]
+        
+        if has_final:
+            lines += [
+                f"",
+                f"> **Nota Storica:** Questo scenario è stato attivamente discusso ed evoluto dai partecipanti partendo da una base AI.",
+                f"",
+                f"#### 🧠 Versione Definitiva (Consolidata dal Gruppo)"
+            ]
+            if n_fin:
+                lines += [f"", n_fin]
+            
+            if m_fin:
+                lines.append("")
+                lines.append("**Minacce:**")
+                for m in m_fin: lines.append(f"- {m}")
+            if o_fin:
+                lines.append("")
+                lines.append("**Opportunità:**")
+                for o in o_fin: lines.append(f"- {o}")
+                
+            lines.append("")
+            lines.append("---")
+            lines.append("#### 🤖 Origine: Bozza dell'Agente per la Discussione")
+            
         if sc.get("narrativa"):
             lines += [f"", sc["narrativa"]]
         if sc.get("key_points_data"):
@@ -229,16 +261,18 @@ def genera_markdown():
                     lines.append("")
                     lines.append("**⚡ Divergenze Emerse:**")
                     for x in divs: lines.append(f"- {x}")
-        if sc.get("minacce"):
-            lines.append("")
-            lines.append("**Minacce:**")
-            for m in sc["minacce"]:
-                lines.append(f"- {m}")
-        if sc.get("opportunita"):
-            lines.append("")
-            lines.append("**Opportunità:**")
-            for o in sc["opportunita"]:
-                lines.append(f"- {o}")
+        
+        if not has_final:
+            if sc.get("minacce"):
+                lines.append("")
+                lines.append("**Minacce:**")
+                for m in sc["minacce"]:
+                    lines.append(f"- {m}")
+            if sc.get("opportunita"):
+                lines.append("")
+                lines.append("**Opportunità:**")
+                for o in sc["opportunita"]:
+                    lines.append(f"- {o}")
 
     return "\n".join(lines)
 

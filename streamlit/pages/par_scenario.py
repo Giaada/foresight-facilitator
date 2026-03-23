@@ -171,9 +171,81 @@ if is_group_phase:
                 
         st.divider()
         
+        @st.fragment(run_every=5)
+        def _sezione_definitiva():
+            sc_live = get_scenario(sc["id"])
+            if not sc_live: return
+            
+            st.markdown("### ✍️ Versione Definitiva (Editor Collaborativo)")
+            locked_by = sc_live.get("locked_by_partecipante_id")
+            
+            t_fin = sc_live.get("titolo_finale") or sc_live.get("titolo", "")
+            n_fin = sc_live.get("narrativa_finale") or sc_live.get("narrativa", "")
+            
+            m_fin_list = sc_live.get("minacce_finale")
+            if m_fin_list is None or not isinstance(m_fin_list, list):
+                m_fin_list = sc_live.get("minacce", [])
+            m_fin = "\n".join(m_fin_list)
+            
+            o_fin_list = sc_live.get("opportunita_finale")
+            if o_fin_list is None or not isinstance(o_fin_list, list):
+                o_fin_list = sc_live.get("opportunita", [])
+            o_fin = "\n".join(o_fin_list)
+
+            if locked_by == partecipante_id:
+                st.success("Sei il Relatore. Puoi modificare la versione finale per il gruppo.")
+                if st.button("🔓 Cedi il controllo / Chiudi Editor", type="primary"):
+                    aggiorna_scenario(sc_live["id"], locked_by_partecipante_id=None)
+                    st.rerun()
+                
+                with st.form(f"form_finale_{sc_live['id']}"):
+                    nuovo_t = st.text_input("Titolo Definitivo", value=t_fin)
+                    nuovo_n = st.text_area("Narrativa Definitiva", value=n_fin, height=200)
+                    
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        nuovo_m = st.text_area("Minacce (una per riga)", value=m_fin, height=150)
+                    with c2:
+                        nuovo_o = st.text_area("Opportunità (una per riga)", value=o_fin, height=150)
+                    
+                    if st.form_submit_button("💾 Salva Modifiche"):
+                        aggiorna_scenario(
+                            sc_live["id"],
+                            titolo_finale=nuovo_t,
+                            narrativa_finale=nuovo_n,
+                            minacce_finale=[x.strip() for x in nuovo_m.split("\n") if x.strip()],
+                            opportunita_finale=[x.strip() for x in nuovo_o.split("\n") if x.strip()]
+                        )
+                        st.rerun()
+
+            else:
+                if not locked_by:
+                    st.info("Nessuno sta modificando la bozza. Prendi il controllo se il gruppo ti ha designato come relatore.")
+                    if st.button("🙋‍♂️ Prendi il controllo per modificare", type="primary"):
+                        aggiorna_scenario(sc_live["id"], locked_by_partecipante_id=partecipante_id)
+                        st.rerun()
+                else:
+                    plist = get_partecipanti(sessione_id)
+                    locker = next((p for p in plist if p["id"] == locked_by), None)
+                    nome_locker = locker["nome"] if locker else "Un altro partecipante"
+                    st.warning(f"🔒 **{nome_locker}** sta attualmente modificando la versione finale. Tu puoi solo visualizzare le modifiche aggiornate in tempo reale.")
+                
+                with st.container(border=True):
+                    if t_fin: st.markdown(f"**Titolo Definitivo:** {t_fin}")
+                    if n_fin: st.markdown(f"**Narrativa Definitiva:** {n_fin}")
+                    
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        st.markdown("**Minacce:**\n" + ("\n".join(f"- {x}" for x in m_fin_list) if m_fin_list else "- *Nessuna*"))
+                    with c2:
+                        st.markdown("**Opportunità:**\n" + ("\n".join(f"- {x}" for x in o_fin_list) if o_fin_list else "- *Nessuna*"))
+
+        _sezione_definitiva()
+        
+        st.divider()
         if stato != "concluso":
-            st.info("Attendete l'avanzamento alla Dashboard Generale per scaricare i PDF finali.")
-            if st.button("🔄 Aggiorna Bozza"):
+            st.info("Attendete l'avanzamento alla Dashboard Generale per terminare.")
+            if st.button("🔄 Aggiorna Pagina"):
                 st.rerun()
         else:
             st.success("🎉 Sessione completamente terminata! Ottimo lavoro.")

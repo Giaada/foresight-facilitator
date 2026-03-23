@@ -272,7 +272,7 @@ pdf_html = f"""
 </head>
 <body>
 
-<div id="pdf-content" style="display: none;">
+<div style="position: absolute; left: -9999px; top: 0; width: 800px; background-color: white;">
   <div id="pdf-report-body">
     {html_content}
   </div>
@@ -284,19 +284,17 @@ pdf_html = f"""
   btn.innerHTML = '⚙️ Generazione PDF in corso...';
   btn.style.backgroundColor = '#6B7280';
   
-  var element = document.getElementById('pdf-content');
-  element.style.display = 'block';
+  var element = document.getElementById('pdf-report-body');
   
   var opt = {{
     margin: 15,
     filename: 'Report_Scenario_Planning_#{sid}.pdf',
     image: {{ type: 'jpeg', quality: 0.98 }},
-    html2canvas: {{ scale: 2, useCORS: true }},
+    html2canvas: {{ scale: 2, useCORS: true, windowWidth: 800 }},
     jsPDF: {{ unit: 'mm', format: 'a4', orientation: 'portrait' }}
   }};
   
   html2pdf().set(opt).from(element).save().then(function() {{
-    element.style.display = 'none';
     btn.innerHTML = originalText;
     btn.style.backgroundColor = '#4F46E5';
   }});

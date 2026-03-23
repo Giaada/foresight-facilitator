@@ -64,7 +64,7 @@ def st_scarica_pdf_scenario_individuale(scenario_indiv, sessione, nome_partecipa
     </style>
     </head>
     <body>
-    <div id="{unique_id}-container" style="display: none;">
+    <div style="position: absolute; left: -9999px; top: 0; width: 800px; background-color: white;">
       <div id="{unique_id}">
         {html_content}
       </div>
@@ -74,19 +74,18 @@ def st_scarica_pdf_scenario_individuale(scenario_indiv, sessione, nome_partecipa
       var originalText = btn.innerHTML;
       btn.innerHTML = '⚙️ Generazione PDF...';
       btn.style.backgroundColor = '#6B7280';
-      var element = document.getElementById('{unique_id}-container');
-      element.style.display = 'block';
+      
+      var element = document.getElementById('{unique_id}');
       
       var opt = {{
         margin: 15,
         filename: 'Scenario_{nome_partecipante}.pdf',
         image: {{ type: 'jpeg', quality: 0.98 }},
-        html2canvas: {{ scale: 2 }},
+        html2canvas: {{ scale: 2, useCORS: true, windowWidth: 800 }},
         jsPDF: {{ unit: 'mm', format: 'a4', orientation: 'portrait' }}
       }};
       
       html2pdf().set(opt).from(element).save().then(function() {{
-        element.style.display = 'none';
         btn.innerHTML = originalText;
         btn.style.backgroundColor = '#10B981';
       }});

@@ -243,8 +243,18 @@ if is_group_phase:
         _sezione_definitiva()
         
         st.divider()
+        sc_live = get_scenario(sc["id"])
         if stato != "concluso":
-            st.info("Attendete l'avanzamento alla Dashboard Generale per terminare.")
+            if sc_live.get("step_corrente") == "concluso":
+                st.success("🏁 Avete dichiarato concluso il lavoro di gruppo! Il Facilitatore è stato avvisato.")
+                st.info("Attendete che la sessione venga spostata alla Dashboard Generale Finale.")
+            else:
+                st.warning("Assicuratevi che la Versione Definitiva sia pronta prima di dichiarare concluso il lavoro.")
+                if st.button("✅ Dichiara Lavoro di Gruppo Concluso", type="primary", use_container_width=True):
+                    aggiorna_scenario(sc_live["id"], step_corrente="concluso", locked_by_partecipante_id=None)
+                    st.rerun()
+            
+            st.divider()
             if st.button("🔄 Aggiorna Pagina"):
                 st.rerun()
         else:

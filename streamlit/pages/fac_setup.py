@@ -8,7 +8,7 @@ from lib.auth import check_facilitatore
 from lib.database import (
     get_sessione_by_id, aggiorna_sessione, get_fenomeni,
     aggiungi_fenomeno, elimina_fenomeno, crea_sessione, lista_sessioni,
-    elimina_sessione
+    elimina_sessione, get_modelli, crea_modello, elimina_modello
 )
 
 check_facilitatore()
@@ -20,11 +20,16 @@ if not st.session_state.get("sessione_id"):
     st.markdown("Crea una nuova sessione oppure apri una sessione esistente.")
     st.divider()
 
-    col1, col2 = st.columns(2)
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "➕ Nuova Sessione", 
+        "📋 Carica Modello", 
+        "💾 Gestione Modelli", 
+        "📂 Sessioni Esistenti"
+    ])
 
-    # ── Nuova sessione ───────────────────────────────────
-    with col1:
-        st.subheader("➕ Nuova sessione")
+    # ── Nuova sessione manuale ───────────────────────────
+    with tab1:
+        st.subheader("➕ Nuova sessione manuale")
         with st.form("nuova_sessione", clear_on_submit=False):
             domanda = st.text_area(
                 "Domanda di ricerca *",
@@ -63,9 +68,74 @@ if not st.session_state.get("sessione_id"):
                 st.session_state["sessione_id"] = sid
                 st.rerun()
 
+    # ── Carica da Modello ────────────────────────────────
+    with tab2:
+        st.subheader("📋 Avvia da Modello Creato")
+        modelli = get_modelli()
+        if not modelli:
+            st.info("Nessun modello salvato. Puoi crearne uno nel tab 'Gestione Modelli'.")
+        else:
+            with st.form("avvia_da_modello"):
+                st.markdown("Seleziona un modello per inizializzare istantaneamente una nuova sessione con tutti i suoi parametri preconfigurati. Verrà generato in automatico un nuovo Codice PIN di accesso per i partecipanti.")
+                mod_opzioni = {m["id"]: m for m in modelli}
+                mod_scelto_id = st.selectbox(
+                    "Scegli il Modello",
+                    options=list(mod_opzioni.keys()),
+                    format_func=lambda x: f"{mod_opzioni[x]['nome']} ({mod_opzioni[x]['domanda_ricerca'][:50]}...)"
+                )
+                submitted_mod = st.form_submit_button("🚀 Avvia Nuova Sessione da Modello", type="primary")
+            
+            if submitted_mod and mod_scelto_id:
+                m_data = mod_opzioni[mod_scelto_id]
+                f_raw = m_data.get("fenomeni_raw", "")
+                f_list = [{"testo": f.strip()} for f in f_raw.splitlines() if f.strip()]
+                sid = crea_sessione(m_data["domanda_ricerca"], m_data["frame_temporale"], m_data["key_points"], f_list)
+                st.session_state["sessione_id"] = sid
+                st.success("Sessione avviata dal modello con successo!")
+                st.rerun()
+
+    # ── Gestione Modelli ─────────────────────────────────
+    with tab3:
+        st.subheader("💾 Crea Nuovo Modello")
+        st.caption("Configura un setup riutilizzabile su cui basare infinite sessioni future.")
+        with st.form("nuovo_modello", clear_on_submit=True):
+            titolo_mod = st.text_input("Nome Modello *", placeholder="Es. Workshop Energia 2050 - Base")
+            dom_mod = st.text_area("Domanda di ricerca *", height=80)
+            frame_mod = st.text_input("Orizzonte temporale *")
+            st.markdown("**Key Points** (uno per riga)")
+            kp_mod = st.text_area("Key points", height=60, label_visibility="collapsed")
+            st.markdown("**Fenomeni / Trend iniziali** (uno per riga)")
+            fen_mod = st.text_area("Fenomeni", height=80, label_visibility="collapsed")
+            sub_save = st.form_submit_button("Salva Modello", type="secondary")
+            
+        if sub_save:
+            if not titolo_mod.strip() or not dom_mod.strip() or not frame_mod.strip():
+                st.error("Nome Modello, Domanda e Orizzonte sono campi obbligatori.")
+            else:
+                key_points = [k.strip() for k in kp_mod.strip().splitlines() if k.strip()]
+                crea_modello(titolo_mod.strip(), dom_mod.strip(), frame_mod.strip(), key_points, fen_mod.strip())
+                st.success(f"Modello '{titolo_mod.strip()}' salvato con successo!")
+                st.rerun()
+                
+        st.divider()
+        st.subheader("🗑️ Cronologia Modelli")
+        mod_av = get_modelli()
+        if not mod_av:
+            st.write("Ancora nessun modello salvato.")
+        for m in mod_av:
+            with st.container(border=True):
+                mc1, mc2 = st.columns([5, 1])
+                with mc1:
+                    st.markdown(f"**{m['nome']}**")
+                    st.caption(f"{m['domanda_ricerca'][:70]}... | 🕐 {m['frame_temporale']}")
+                with mc2:
+                    if st.button("Elimina", key=f"del_mod_{m['id']}", help="Elimina in modo definitivo"):
+                        elimina_modello(m['id'])
+                        st.rerun()
+
     # ── Sessioni esistenti ────────────────────────────────
-    with col2:
-        st.subheader("📂 Sessioni esistenti")
+    with tab4:
+        st.subheader("📂 Sessioni attive / passate")
         sessioni = lista_sessioni()
         if not sessioni:
             st.info("Nessuna sessione ancora creata.")

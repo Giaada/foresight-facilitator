@@ -35,6 +35,16 @@ def init_db():
             driver2_neg TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
+        
+        CREATE TABLE IF NOT EXISTS modello (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            domanda_ricerca TEXT NOT NULL,
+            frame_temporale TEXT NOT NULL,
+            key_points TEXT NOT NULL DEFAULT '[]',
+            fenomeni_raw TEXT NOT NULL DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
 
         CREATE TABLE IF NOT EXISTS fenomeno (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -429,5 +439,49 @@ def aggiungi_messaggio(scenario_id, ruolo, contenuto):
         "INSERT INTO messaggio (scenario_id, ruolo, contenuto) VALUES (?, ?, ?)",
         (scenario_id, ruolo, contenuto)
     )
+    conn.commit()
+    conn.close()
+
+# ── Modelli (Templates) ───────────────────────────────────
+
+def crea_modello(nome, domanda_ricerca, frame_temporale, key_points, fenomeni_raw):
+    conn = get_conn()
+    conn.execute(
+        "INSERT INTO modello (nome, domanda_ricerca, frame_temporale, key_points, fenomeni_raw) VALUES (?, ?, ?, ?, ?)",
+        (nome, domanda_ricerca, frame_temporale, json.dumps(key_points, ensure_ascii=False), fenomeni_raw)
+    )
+    conn.commit()
+    conn.close()
+
+def get_modelli():
+    conn = get_conn()
+    rows = conn.execute("SELECT * FROM modello ORDER BY created_at DESC").fetchall()
+    conn.close()
+    res = []
+    for r in rows:
+        d = dict(r)
+        try:
+            d["key_points"] = json.loads(d["key_points"])
+        except Exception:
+            d["key_points"] = []
+        res.append(d)
+    return res
+
+def get_modello_by_id(modello_id):
+    conn = get_conn()
+    row = conn.execute("SELECT * FROM modello WHERE id = ?", (modello_id,)).fetchone()
+    conn.close()
+    if not row:
+        return None
+    d = dict(row)
+    try:
+        d["key_points"] = json.loads(d["key_points"])
+    except Exception:
+        d["key_points"] = []
+    return d
+
+def elimina_modello(modello_id):
+    conn = get_conn()
+    conn.execute("DELETE FROM modello WHERE id = ?", (modello_id,))
     conn.commit()
     conn.close()

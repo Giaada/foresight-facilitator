@@ -262,9 +262,11 @@ Leggi attentamente tutti i contributi e crea uno Scenario Integrato che rapprese
 Rispondi SOLO con un JSON con la seguente struttura:
 {{
   "titolo": "Titolo Unificato dello Scenario",
-  "narrativa": "Due o tre paragrafi che descrivono coerentemente il mondo futuro integrando le visioni. Includi una breve sezione che evidenzia esplicitamente 'Punti in Comune' e 'Divergenze Emerse' tra i vari partecipanti.",
+  "narrativa": "Due o tre paragrafi che descrivono coerentemente il mondo futuro integrando le visioni. NON elencare i punti in comune o divergenze qui dentro.",
   "minacce": ["minaccia unificata 1", "minaccia 2", "ecc"],
-  "opportunita": ["opportunità unificata 1", "opportunità 2", "ecc"]
+  "opportunita": ["opportunità unificata 1", "opportunità 2", "ecc"],
+  "punti_comune": ["Punto in comune solido 1", "Punto in comune 2"],
+  "divergenze": ["Spunto unico di un partecipante 1", "Visione discordante 2"]
 }}"""
 
     client = _get_client()
@@ -287,6 +289,10 @@ Rispondi SOLO con un JSON con la seguente struttura:
             narrativa=dati.get("narrativa", "Sintesi non disponibile."),
             minacce=dati.get("minacce", []),
             opportunita=dati.get("opportunita", []),
+            key_points_data={
+                "punti_comune": dati.get("punti_comune", []),
+                "divergenze": dati.get("divergenze", [])
+            },
             step_corrente="concluso"
         )
     except Exception as e:

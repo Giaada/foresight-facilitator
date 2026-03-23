@@ -6,7 +6,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from lib.database import (
     get_sessione_by_id, get_scenari, get_scenario,
-    get_messaggi, get_partecipanti, get_scenario_individuale
+    get_messaggi, get_partecipanti, get_scenario_individuale, aggiorna_scenario
 )
 from lib.agent import invia_messaggio, avvia_scenario
 
@@ -140,8 +140,21 @@ if is_group_phase:
     if sc.get("titolo"):
         st.markdown(f"**🏷️ Titolo:** {sc['titolo']}")
         
-    st.markdown("#### 📖 Narrativa di Gruppo, Punti in Comune e Divergenze")
+    st.markdown("#### 📖 Narrativa di Gruppo Integrata")
     st.markdown(sc.get("narrativa", "Sintesi non disponibile."))
+    
+    kp_data = sc.get("key_points_data", {})
+    if isinstance(kp_data, dict):
+        p_com = kp_data.get("punti_comune", [])
+        divs = kp_data.get("divergenze", [])
+        if p_com or divs:
+            c_com, c_div = st.columns(2)
+            with c_com:
+                if p_com:
+                    st.success("**🤝 Cosa vi accomuna**\n\n" + "\n".join(f"- {x}" for x in p_com))
+            with c_div:
+                if divs:
+                    st.warning("**⚡ Idee uniche o divergenti**\n\n" + "\n".join(f"- {x}" for x in divs))
     
     c1, c2 = st.columns(2)
     with c1:
@@ -199,6 +212,12 @@ else:
             if testo:
                 with st.spinner("L'agente sta elaborando..."):
                     _, nuovo_step = invia_messaggio(sc, sessione, testo)
+                st.rerun()
+                
+            st.divider()
+            st.caption("Quando hai finito di fornire idee a Claude e ti ritieni soddisfatto/a per il tuo quadrante:")
+            if st.button("🏁 Dichiara Lavoro Individuale Concluso", type="primary", use_container_width=True):
+                aggiorna_scenario(sc["id"], step_corrente="concluso")
                 st.rerun()
         else:
             st.success("🎉 Scenario Individuale completato! Ottimo lavoro.")

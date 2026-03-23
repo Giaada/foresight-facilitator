@@ -208,10 +208,27 @@ def genera_markdown():
         if sc.get("narrativa"):
             lines += [f"", sc["narrativa"]]
         if sc.get("key_points_data"):
-            lines.append("")
-            lines.append("**Key Points:**")
-            for kp, ris in sc["key_points_data"].items():
-                lines.append(f"- **{kp}:** {ris}")
+            kp_data = sc["key_points_data"]
+            if isinstance(kp_data, dict):
+                p_com = kp_data.get("punti_comune", [])
+                divs = kp_data.get("divergenze", [])
+                standard_kp = {k: v for k, v in kp_data.items() if k not in ("punti_comune", "divergenze")}
+                
+                if standard_kp:
+                    lines.append("")
+                    lines.append("**Key Points:**")
+                    for k, v in standard_kp.items():
+                        lines.append(f"- **{k}:** {v}")
+                
+                if p_com:
+                    lines.append("")
+                    lines.append("**🤝 Punti in Comune:**")
+                    for x in p_com: lines.append(f"- {x}")
+                    
+                if divs:
+                    lines.append("")
+                    lines.append("**⚡ Divergenze Emerse:**")
+                    for x in divs: lines.append(f"- {x}")
         if sc.get("minacce"):
             lines.append("")
             lines.append("**Minacce:**")

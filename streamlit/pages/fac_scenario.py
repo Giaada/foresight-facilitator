@@ -154,6 +154,16 @@ elif stato in ("scenario_planning_gruppo", "concluso"):
                     with st.container(border=True):
                         st.markdown("**Bozza Integrata**")
                         st.markdown(sc_g["narrativa"])
+                        
+                kp_data = sc_g.get("key_points_data", {})
+                if isinstance(kp_data, dict):
+                    p_com = kp_data.get("punti_comune", [])
+                    divs = kp_data.get("divergenze", [])
+                    if p_com:
+                        st.success("**🤝 Punti in Comune**\n\n" + "\n".join(f"- {x}" for x in p_com))
+                    if divs:
+                        st.warning("**⚡ Divergenze Emerse**\n\n" + "\n".join(f"- {x}" for x in divs))                        
+
                 if sc_g.get("minacce"):
                     with st.container(border=True):
                         st.markdown("**⚠️ Minacce Emerse**")

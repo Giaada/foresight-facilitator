@@ -65,21 +65,21 @@ ISTRUZIONI E COMPORTAMENTO:
 - SOLO se l'utente ti dà la conferma di procedere, al turno successivo imposterai "nuovo_step" al nome dello step seguente. Finché non hai il via libera esplicito, mantieni "nuovo_step" a null e continua la fase corrente.
 
 REGOLE PER aggiornamenti (FONDAMENTALE - segui sempre):
-- Dato che sei in una chat interattiva, l'interfaccia utente si aggiorna in tempo reale SOLO SE fornisci il blocco aggiornamenti completo ad ogni singolo tuo messaggio. 
-- Ad OGNI tuo messaggio, produci sempre l'intero stato corrente compilato dentro l'oggetto 'aggiornamenti' (narrativa parziale/completa, minacce emerse finora, ecc.).
-- MANTIENI SEMPRE il testo dei turni precedenti nei vari campi, non svuotarli, ma semplicemente ammodionali.
-- Step key_points: salva/aggiungi tutte le risposte ricevute in aggiornamenti.key_points_data
+- Dato che sei in un'App, l'interfaccia utente mostra i dati in tempo reale SOLO SE fornisci l'oggetto "aggiornamenti" completo ad OGNI singolo messaggio.
+- Ad OGNI tuo messaggio DEVI SEMPRE RIPETERE tutti i dati accumulati precedentemente (narrativa parziale, minacce, etc.) dentro l'oggetto 'aggiornamenti'. Non mattere mai null se hai già raccolto una narrativa o un titolo: COPIALO e ripetilo per mantenere l'interfaccia sincronizzata!
+- Step key_points: salva e accumula in tempo reale tutte le risposte ricevute in aggiornamenti.key_points_data
 
-RISPOSTA - rispondi SOLO con questo JSON, senza testo prima o dopo:
+RISPOSTA:
+Devi rispondere ESCLUSIVAMENTE con UN SOLO OGGETTO JSON. ASSOLUTAMENTE NESSUN TESTO FUORI DAL JSON, NO "Ecco il JSON", NO "\`\`\`json". SOLO ED ESCLUSIVAMENTE IL CARATTERE {{ SEGUITO DAI JSON DATA.
 {{
-  "testo": "messaggio da mostrare ai partecipanti",
-  "nuovo_step": "nome del prossimo step se stai avanzando, altrimenti null",
+  "testo": "il vero messaggio discorsivo che leggerà il partecipante",
+  "nuovo_step": "nome del prossimo step se l'utente ti ha autorizzato ad avanzare, altrimenti null",
   "aggiornamenti": {{
-    "narrativa": "testo narrativa se disponibile, altrimenti null",
-    "titolo": "titolo se confermato, altrimenti null",
-    "minacce": ["minaccia 1", "minaccia 2"],
-    "opportunita": ["opportunità 1", "opportunità 2"],
-    "key_points_data": {{"nome_key_point": "risposta ricevuta"}}
+    "narrativa": "testo narrativa accumulato fino ad ora se disponibile, altrimenti null",
+    "titolo": "titolo stabilito o provvisorio se confermato/impostato, altrimenti null",
+    "minacce": ["minaccia emersa 1", "minaccia 2"],
+    "opportunita": ["opportunità 1"],
+    "key_points_data": {{"nome_key_point_1": "risposta ricevuta"}}
   }}
 }}"""
 
@@ -118,29 +118,23 @@ def invia_messaggio(scenario, sessione, testo_utente):
         )
         testo_raw = risposta.content[0].text
 
-        # Prova a parsare JSON — gestisce blocchi ```json...``` e testo extra
+        # Prova a parsare JSON con Regex sicura
         testo_risposta = testo_raw
         nuovo_step = None
         agg = {}
         try:
-            # Rimuovi eventuale blocco markdown ```json ... ```
-            cleaned = re.sub(r'^```(?:json)?\s*', '', testo_raw.strip(), flags=re.MULTILINE)
-            cleaned = re.sub(r'```\s*$', '', cleaned.strip(), flags=re.MULTILINE)
-            # Cerca il primo oggetto JSON completo (non greedy non funziona su oggetti annidati,
-            # usiamo json.JSONDecoder.raw_decode che si ferma al termine del primo oggetto valido)
-            decoder = json.JSONDecoder()
-            idx = cleaned.find('{')
-            if idx != -1:
-                parsed, _ = decoder.raw_decode(cleaned, idx)
-                testo_risposta = parsed.get("testo") or testo_raw
+            match = re.search(r'\{.*\}', testo_raw, re.DOTALL)
+            if match:
+                cleaned = match.group(0)
+                parsed = json.loads(cleaned)
+                testo_risposta = parsed.get("testo") or "Risposta non decifrabile."
                 nuovo_step = parsed.get("nuovo_step")
                 agg = parsed.get("aggiornamenti") or {}
         except Exception:
-            # Fallback: usa il testo grezzo come risposta
-            testo_risposta = testo_raw
+            # Fallback in caso di delirio LLM: restituisce almeno il parse rotto mascherato
+            testo_risposta = "Ho elaborato i dati ma c'è stato un piccolo inciampo di comunicazione testuale. Cosa dicevamo?"
 
-        # Salva messaggi
-        aggiungi_messaggio(scenario["id"], "user", testo_utente)
+        # Salva SOLO messaggio assistant (quello user l'ha già salvato la view)
         aggiungi_messaggio(scenario["id"], "assistant", testo_risposta)
 
         # Aggiorna scenario

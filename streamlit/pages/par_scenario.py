@@ -210,6 +210,11 @@ else:
                 key=f"chat_par_{sc['id']}",
             )
             if testo:
+                from lib.database import aggiungi_messaggio
+                aggiungi_messaggio(sc["id"], "user", testo)
+                with st.chat_message("user", avatar="🙋"):
+                    st.markdown(testo)
+                
                 with st.spinner("L'agente sta elaborando..."):
                     _, nuovo_step = invia_messaggio(sc, sessione, testo)
                 st.rerun()

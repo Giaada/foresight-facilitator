@@ -15,6 +15,10 @@ def get_conn():
 
 def init_db():
     conn = get_conn()
+    try:
+        conn.execute("ALTER TABLE scenario ADD COLUMN partecipante_id INTEGER REFERENCES partecipante(id)")
+    except Exception:
+        pass
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS sessione (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -71,7 +75,9 @@ def init_db():
             opportunita TEXT DEFAULT '[]',
             key_points_data TEXT DEFAULT '{}',
             step_corrente TEXT DEFAULT 'intro',
-            FOREIGN KEY (sessione_id) REFERENCES sessione(id)
+            partecipante_id INTEGER,
+            FOREIGN KEY (sessione_id) REFERENCES sessione(id),
+            FOREIGN KEY (partecipante_id) REFERENCES partecipante(id)
         );
 
         CREATE TABLE IF NOT EXISTS messaggio (
@@ -303,14 +309,30 @@ def get_voti_aggregati(sessione_id):
 # ── Scenari ───────────────────────────────────────────────
 
 def crea_scenari(sessione_id):
-    quadranti = [("++", 1), ("+-", 2), ("-+", 3), ("--", 4)]
+    quadranti = [(1, "++"), (2, "+-"), (3, "-+"), (4, "--")]
+    quad_map = {1: "++", 2: "+-", 3: "-+", 4: "--"}
     conn = get_conn()
     conn.execute("DELETE FROM scenario WHERE sessione_id = ?", (sessione_id,))
-    for q, n in quadranti:
+    
+    # 1. Crea scenari di gruppo
+    for n, q in quadranti:
         conn.execute(
             "INSERT INTO scenario (sessione_id, numero, quadrante) VALUES (?, ?, ?)",
             (sessione_id, n, q)
         )
+        
+    # 2. Crea scenari individuali
+    partecipanti = conn.execute("SELECT id, gruppo_numero FROM partecipante WHERE sessione_id = ? AND gruppo_numero IS NOT NULL", (sessione_id,)).fetchall()
+    for p in partecipanti:
+        pid = p["id"]
+        gnum = p["gruppo_numero"]
+        if gnum in quad_map:
+            q = quad_map[gnum]
+            conn.execute(
+                "INSERT INTO scenario (sessione_id, numero, quadrante, partecipante_id) VALUES (?, ?, ?, ?)",
+                (sessione_id, gnum, q, pid)
+            )
+
     conn.commit()
     conn.close()
 
@@ -337,11 +359,35 @@ def _parse_scenario(row):
 def get_scenari(sessione_id):
     conn = get_conn()
     rows = conn.execute(
-        "SELECT * FROM scenario WHERE sessione_id = ? ORDER BY numero",
+        "SELECT * FROM scenario WHERE sessione_id = ? AND partecipante_id IS NULL ORDER BY numero",
         (sessione_id,)
     ).fetchall()
     conn.close()
     return [_parse_scenario(r) for r in rows]
+
+def get_scenari_individuali(sessione_id, gruppo_numero=None):
+    conn = get_conn()
+    if gruppo_numero:
+        rows = conn.execute(
+            "SELECT * FROM scenario WHERE sessione_id = ? AND partecipante_id IS NOT NULL AND numero = ? ORDER BY id",
+            (sessione_id, gruppo_numero)
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM scenario WHERE sessione_id = ? AND partecipante_id IS NOT NULL ORDER BY numero",
+            (sessione_id,)
+        ).fetchall()
+    conn.close()
+    return [_parse_scenario(r) for r in rows]
+
+def get_scenario_individuale(sessione_id, partecipante_id):
+    conn = get_conn()
+    row = conn.execute(
+        "SELECT * FROM scenario WHERE sessione_id = ? AND partecipante_id = ?",
+        (sessione_id, partecipante_id)
+    ).fetchone()
+    conn.close()
+    return _parse_scenario(row)
 
 
 def get_scenario(scenario_id):

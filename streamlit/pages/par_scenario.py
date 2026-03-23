@@ -6,7 +6,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from lib.database import (
     get_sessione_by_id, get_scenari, get_scenario,
-    get_messaggi, get_partecipanti
+    get_messaggi, get_partecipanti, get_scenario_individuale
 )
 from lib.agent import invia_messaggio, avvia_scenario
 
@@ -38,13 +38,13 @@ st.divider()
 # ── Controlla stato sessione ──────────────────────────────
 stato = sessione.get("stato")
 
-if stato not in ("scenario_planning", "concluso"):
+if stato not in ("scenario_planning", "scenario_planning_gruppo", "concluso"):
     st.info("⏳ La sessione non è ancora nella fase di Scenario Planning. Attendi istruzioni dal facilitatore.")
 
     @st.fragment(run_every=10)
     def _attendi_scenario():
         s = get_sessione_by_id(sessione_id)
-        if s and s.get("stato") in ("scenario_planning", "concluso"):
+        if s and s.get("stato") in ("scenario_planning", "scenario_planning_gruppo", "concluso"):
             st.rerun(scope="app")
     _attendi_scenario()
 
@@ -74,18 +74,23 @@ if not gruppo_numero:
 
 # ── Recupera scenario corrispondente al gruppo ────────────
 # gruppo_numero corrisponde a scenario.numero
-scenari = get_scenari(sessione_id)
-scenario_corrente = next((s for s in scenari if s["numero"] == gruppo_numero), None)
 
-if not scenario_corrente:
-    st.info("⏳ Lo scenario per il tuo gruppo non è ancora disponibile. Attendi il facilitatore.")
+is_group_phase = (stato == "scenario_planning_gruppo")
+sc = None
+
+if is_group_phase:
+    scenari = get_scenari(sessione_id)
+    scenario_corrente = next((s for s in scenari if s["numero"] == gruppo_numero), None)
+    if scenario_corrente:
+        sc = get_scenario(scenario_corrente["id"])
+else:
+    # Individual Phase
+    sc = get_scenario_individuale(sessione_id, partecipante_id)
+
+if not sc:
+    st.info("⏳ Lo scenario non è ancora disponibile. Attendi che il facilitatore lo attivi.")
     if st.button("🔄 Aggiorna"):
         st.rerun()
-    st.stop()
-
-sc = get_scenario(scenario_corrente["id"])
-if not sc:
-    st.error("Scenario non trovato.")
     st.stop()
 
 # ── Layout: chat + pannello scenario ─────────────────────
@@ -126,101 +131,142 @@ css_matrix = f"""
 """
 st.markdown(css_matrix, unsafe_allow_html=True)
 
-col_chat, col_panel = st.columns([3, 2])
 
-# ── Chat ──────────────────────────────────────────────────
-with col_chat:
-    st.markdown("### 💬 Conversazione con l'Agente")
-
-    messaggi = get_messaggi(sc["id"])
-
-    # Avvia agente se nessun messaggio
-    if not messaggi and sc["step_corrente"] == "intro":
-        with st.spinner("L'agente si sta preparando..."):
-            avvia_scenario(sc, sessione)
-            st.rerun()
-
-    # Mostra chat
-    chat_container = st.container(height=450)
-    with chat_container:
-        for msg in messaggi:
-            if msg["ruolo"] == "assistant":
-                with st.chat_message("assistant", avatar="🤖"):
-                    st.markdown(msg["contenuto"])
-            elif msg["ruolo"] == "user":
-                with st.chat_message("user", avatar="🙋"):
-                    st.markdown(msg["contenuto"])
-
-    # Input risposta gruppo
-    if sc["step_corrente"] != "concluso":
-        testo = st.chat_input(
-            "Scrivi la risposta del gruppo...",
-            key=f"chat_par_{sc['id']}",
-        )
-        if testo:
-            with st.spinner("L'agente sta elaborando..."):
-                _, nuovo_step = invia_messaggio(sc, sessione, testo)
+if is_group_phase:
+    st.markdown("### 🤝 Bozza Consolidata Integrata")
+    st.success("Tutte le bozze dei partecipanti di questo gruppo sono state unificate.")
+    st.info("Qui sotto trovate le visioni integrate individualizzate. Utilizzate le somiglianze e differenze emerse per avviare una discussione produttiva.")
+    
+    if sc.get("titolo"):
+        st.markdown(f"**🏷️ Titolo:** {sc['titolo']}")
+        
+    st.markdown("#### 📖 Narrativa di Gruppo, Punti in Comune e Divergenze")
+    st.markdown(sc.get("narrativa", "Sintesi non disponibile."))
+    
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown("#### ⚠️ Minacce Emerse")
+        for m in sc.get("minacce", []):
+            st.markdown(f"- {m}")
+    with c2:
+        st.markdown("#### ✨ Opportunità Emerse")
+        for o in sc.get("opportunita", []):
+            st.markdown(f"- {o}")
+            
+    st.divider()
+    
+    if stato != "concluso":
+        st.info("Attendete l'avanzamento alla Dashboard Generale per scaricare i PDF finali.")
+        if st.button("🔄 Aggiorna Bozza"):
             st.rerun()
     else:
-        st.success("🎉 Scenario completato! Ottimo lavoro.")
-        st.info("Attendi che il facilitatore pubblichi il report PDF consolidato contenente le riflessioni di tutti i gruppi.")
+        st.success("🎉 Sessione completamente terminata! Ottimo lavoro.")
         if st.button("Torna alla vista principale", type="primary"):
             st.rerun()
 
-# ── Pannello scenario in costruzione ─────────────────────
-with col_panel:
-    @st.fragment(run_every=5)
-    def _pannello_scenario():
-        sc_live = get_scenario(sc["id"])
-        if not sc_live:
-            return
+else:
+    col_chat, col_panel = st.columns([3, 2])
+    
+    # ── Chat ──────────────────────────────────────────────────
+    with col_chat:
+        st.markdown("### 💬 Conversazione Autonoma con l'Agente")
+    
+        messaggi = get_messaggi(sc["id"])
+    
+        # Avvia agente se nessun messaggio
+        if not messaggi and sc["step_corrente"] == "intro":
+            with st.spinner("L'agente si sta preparando per il tuo lavoro individuale..."):
+                avvia_scenario(sc, sessione)
+                st.rerun()
+    
+        # Mostra chat
+        chat_container = st.container(height=450)
+        with chat_container:
+            for msg in messaggi:
+                if msg["ruolo"] == "assistant":
+                    with st.chat_message("assistant", avatar="🤖"):
+                        st.markdown(msg["contenuto"])
+                elif msg["ruolo"] == "user":
+                    with st.chat_message("user", avatar="🙋"):
+                        st.markdown(msg["contenuto"])
+    
+        # Input risposta gruppo
+        if sc["step_corrente"] != "concluso":
+            testo = st.chat_input(
+                "Scrivi la tua riflessione personale...",
+                key=f"chat_par_{sc['id']}",
+            )
+            if testo:
+                with st.spinner("L'agente sta elaborando..."):
+                    _, nuovo_step = invia_messaggio(sc, sessione, testo)
+                st.rerun()
+        else:
+            st.success("🎉 Scenario Individuale completato! Ottimo lavoro.")
+            st.info("Attendi che tutti i componenti finiscano. Poi il facilitatore genererà la Bozza Consolidata in cui discuterete in Gruppo!")
+            
+            # Auto-aggiornamento durante l'attesa per saltare al gruppo appena attivato
+            @st.fragment(run_every=5)
+            def poll_group():
+                ss = get_sessione_by_id(sessione_id)
+                if ss and ss.get("stato") in ("scenario_planning_gruppo", "concluso"):
+                    st.rerun(scope="app")
+            poll_group()
+    
+    # ── Pannello scenario in costruzione ─────────────────────
+    with col_panel:
+        @st.fragment(run_every=5)
+        def _pannello_scenario():
+            sc_live = get_scenario(sc["id"])
+            if not sc_live:
+                return
+    
+            STEP_LABEL = {
+                "intro": "🟡 Introduzione",
+                "key_points": "🔵 Key Points",
+                "narrativa": "🟣 Narrativa",
+                "titolo": "🟠 Titolo",
+                "minacce": "🔴 Minacce",
+                "opportunita": "🟢 Opportunità",
+                "concluso": "✅ Completato",
+            }
+            step_label = STEP_LABEL.get(sc_live["step_corrente"], sc_live["step_corrente"])
+            st.caption(f"Step Individuale: {step_label}")
+    
+            with st.expander("📝 Scenario in costruzione", expanded=True):
+                if sc_live.get("titolo"):
+                    st.markdown(f"### {sc_live['titolo']}")
+                else:
+                    st.caption("*Titolo non ancora definito*")
+    
+                if sc_live.get("narrativa"):
+                    with st.container(border=True):
+                        st.markdown("**Narrativa**")
+                        st.markdown(sc_live["narrativa"])
+    
+                if sc_live.get("minacce"):
+                    with st.container(border=True):
+                        st.markdown("**⚠️ Minacce**")
+                        for m in sc_live["minacce"]:
+                            st.markdown(f"- {m}")
+    
+                if sc_live.get("opportunita"):
+                    with st.container(border=True):
+                        st.markdown("**✨ Opportunità**")
+                        for o in sc_live["opportunita"]:
+                            st.markdown(f"- {o}")
+    
+                if sc_live.get("key_points_data"):
+                    st.markdown("**Key Points esplorati:**")
+                    for kp, risposta in sc_live["key_points_data"].items():
+                        st.markdown(f"- **{kp}:** {risposta}")
+    
+                if not any([
+                    sc_live.get("titolo"),
+                    sc_live.get("narrativa"),
+                    sc_live.get("minacce"),
+                    sc_live.get("opportunita"),
+                ]):
+                    st.info("Il tuo piano personale si costruirà dialogando con l'agente.")
+    
+        _pannello_scenario()
 
-        STEP_LABEL = {
-            "intro": "🟡 Introduzione",
-            "key_points": "🔵 Key Points",
-            "narrativa": "🟣 Narrativa",
-            "titolo": "🟠 Titolo",
-            "minacce": "🔴 Minacce",
-            "opportunita": "🟢 Opportunità",
-            "concluso": "✅ Concluso",
-        }
-        step_label = STEP_LABEL.get(sc_live["step_corrente"], sc_live["step_corrente"])
-        st.caption(f"Step: {step_label}")
-
-        with st.expander("📝 Scenario in costruzione", expanded=True):
-            if sc_live.get("titolo"):
-                st.markdown(f"### {sc_live['titolo']}")
-            else:
-                st.caption("*Titolo non ancora definito*")
-
-            if sc_live.get("narrativa"):
-                with st.container(border=True):
-                    st.markdown("**Narrativa**")
-                    st.markdown(sc_live["narrativa"])
-
-            if sc_live.get("minacce"):
-                with st.container(border=True):
-                    st.markdown("**⚠️ Minacce**")
-                    for m in sc_live["minacce"]:
-                        st.markdown(f"- {m}")
-
-            if sc_live.get("opportunita"):
-                with st.container(border=True):
-                    st.markdown("**✨ Opportunità**")
-                    for o in sc_live["opportunita"]:
-                        st.markdown(f"- {o}")
-
-            if sc_live.get("key_points_data"):
-                st.markdown("**Key Points esplorati:**")
-                for kp, risposta in sc_live["key_points_data"].items():
-                    st.markdown(f"- **{kp}:** {risposta}")
-
-            if not any([
-                sc_live.get("titolo"),
-                sc_live.get("narrativa"),
-                sc_live.get("minacce"),
-                sc_live.get("opportunita"),
-            ]):
-                st.info("Lo scenario si costruirà durante la conversazione con l'agente.")
-
-    _pannello_scenario()

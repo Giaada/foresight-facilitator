@@ -221,3 +221,77 @@ Rispondi SOLO con il testo del messaggio, in italiano."""
     aggiungi_messaggio(scenario["id"], "assistant", testo)
     aggiorna_scenario(scenario["id"], step_corrente="key_points")
     return testo
+
+
+def unisci_scenari_gruppo(scenario_gruppo, sessione, scenari_individuali):
+    """
+    Produce una bozza unica a partire dalle bozze individuali dei partecipanti
+    di un determinato quadrante, evidenziando similitudini e differenze.
+    Salva il risultato nel record `scenario_gruppo` e lo pone in stato concluso.
+    """
+    if not scenari_individuali:
+        aggiorna_scenario(scenario_gruppo["id"], narrativa="Nessun contributo individuale trovato per questo gruppo.", step_corrente="concluso")
+        return
+
+    descrizione_quad = descrivi_quadrante(
+        scenario_gruppo["quadrante"],
+        sessione.get("driver1_nome"), sessione.get("driver1_pos"), sessione.get("driver1_neg"),
+        sessione.get("driver2_nome"), sessione.get("driver2_pos"), sessione.get("driver2_neg"),
+    )
+    
+    # Prepara il dump delle bozze
+    testo_bozze = ""
+    for i, s in enumerate(scenari_individuali):
+        titolo = s.get("titolo") or f"Idea {i+1}"
+        narrativa = s.get("narrativa") or "Nessuna narrativa"
+        minacce = ", ".join(s.get("minacce", [])) or "Nessuna"
+        opp = ", ".join(s.get("opportunita", [])) or "Nessuna"
+        
+        testo_bozze += f"\n--- CONTRIBUTO {i+1} ---\nTitolo: {titolo}\nNarrativa: {narrativa}\nMinacce: {minacce}\nOpportunità: {opp}\n"
+
+    prompt = f"""Sei un facilitatore esperto. Devi redigere la BOZZA CONSOLIDATA per lo scenario del Quadrante: {descrizione_quad}.
+Orizzonte: {sessione['frame_temporale']}
+
+Hai ricevuto {len(scenari_individuali)} contributi autonomi dai membri di questo gruppo:
+{testo_bozze}
+
+IL TUO COMPITO:
+Leggi attentamente tutti i contributi e crea uno Scenario Integrato che rappresenti una sintesi potente. 
+
+Rispondi SOLO con un JSON con la seguente struttura:
+{{
+  "titolo": "Titolo Unificato dello Scenario",
+  "narrativa": "Due o tre paragrafi che descrivono coerentemente il mondo futuro integrando le visioni. Includi una breve sezione che evidenzia esplicitamente 'Punti in Comune' e 'Divergenze Emerse' tra i vari partecipanti.",
+  "minacce": ["minaccia unificata 1", "minaccia 2", "ecc"],
+  "opportunita": ["opportunità unificata 1", "opportunità 2", "ecc"]
+}}"""
+
+    client = _get_client()
+
+    try:
+        risposta = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=2000,
+            system="Sei un facilitatore imparziale capace di fare eccellenti sintesi analitiche. Rispondi SEMPRE E SOLO con un JSON valido.",
+            messages=[{"role": "user", "content": prompt}]
+        )
+        testo_raw = risposta.content[0].text
+        cleaned = re.sub(r'^```(?:json)?\s*', '', testo_raw.strip(), flags=re.MULTILINE)
+        cleaned = re.sub(r'```\s*$', '', cleaned.strip(), flags=re.MULTILINE)
+        
+        dati = json.loads(cleaned)
+        aggiorna_scenario(
+            scenario_gruppo["id"],
+            titolo=dati.get("titolo", "Titolo Generato"),
+            narrativa=dati.get("narrativa", "Sintesi non disponibile."),
+            minacce=dati.get("minacce", []),
+            opportunita=dati.get("opportunita", []),
+            step_corrente="concluso"
+        )
+    except Exception as e:
+        aggiorna_scenario(
+            scenario_gruppo["id"],
+            narrativa=f"Errore durante la generazione della sintesi: {str(e)}",
+            step_corrente="concluso"
+        )
+

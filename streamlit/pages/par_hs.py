@@ -115,7 +115,7 @@ except ImportError:
     SORTABLE = False
 
 def fmt_fen(f):
-    return f"{f['testo']} ℹ️" if f.get("descrizione") else f["testo"]
+    return f["testo"]
 
 fenomeni_map = {fmt_fen(f): f for f in fenomeni}
 fenomeni_testi = list(fenomeni_map.keys())
@@ -147,7 +147,7 @@ if SORTABLE:
     st.session_state["ranking_items"] = sorted_items
 
     st.markdown("**Ordine attuale (1 = più rilevante):**")
-    st.caption("Passa il cursore sul testo dei fenomeni (specie quelli con ℹ️) per leggerne la descrizione completa.")
+    st.caption("Passa il cursore sul testo dei fenomeni per leggerne la descrizione completa (se presente).")
     for i, testo in enumerate(sorted_items):
         col_n, col_t = st.columns([1, 8])
         with col_n:
@@ -222,7 +222,7 @@ st.caption("Una volta confermato, non potrai modificare il tuo voto.")
 
 if st.button("Conferma il mio ranking", type="primary", use_container_width=True):
     def lfmt(f):
-        return f"{f['testo']} ℹ️" if f.get("descrizione") else f["testo"]
+        return f["testo"]
     id_map = {lfmt(f): f["id"] for f in get_fenomeni(sessione_id)}
     ranking_voti = []
     for pos, testo in enumerate(ranking_finale):

@@ -53,8 +53,9 @@ def st_scarica_pdf_scenario_individuale(scenario_indiv, sessione, nome_partecipa
     <meta charset="utf-8">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-      body {{ font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 2px; color: #333; margin: 0; }}
-      #{unique_id} {{ padding: 30px; }}
+      * {{ box-sizing: border-box; word-wrap: break-word; overflow-wrap: break-word; max-width: 100%; }}
+      body {{ font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 0; color: #333; margin: 0; }}
+      #{unique_id} {{ padding: 10px 20px; }}
       #{unique_id} h1 {{ color: #4F46E5; border-bottom: 2px solid #e0e7ff; padding-bottom: 10px; margin-bottom: 20px; }}
       #{unique_id} h3 {{ color: #4338CA; margin-top: 20px; }}
       #{unique_id} p, #{unique_id} li {{ line-height: 1.6; font-size: 14px; position: relative; z-index: 1; }}
@@ -88,7 +89,7 @@ def st_scarica_pdf_scenario_individuale(scenario_indiv, sessione, nome_partecipa
     </style>
     </head>
     <body>
-    <div style="position: absolute; left: 0; top: 0; width: 800px; background-color: white; opacity: 0.01; z-index: -10; pointer-events: none;">
+    <div style="position: absolute; left: 0; top: 0; width: 780px; background-color: white; opacity: 0.01; z-index: -10; pointer-events: none;">
       <div id="{unique_id}">
         {html_content}
       </div>
@@ -252,8 +253,9 @@ def st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti):
     <meta charset="utf-8">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-      body {{ font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 2px; color: #333; margin: 0; }}
-      #pdf-report-body {{ padding: 30px; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }}
+      * {{ box-sizing: border-box; word-wrap: break-word; overflow-wrap: break-word; max-width: 100%; }}
+      body {{ font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 0; color: #333; margin: 0; }}
+      #pdf-report-body {{ padding: 10px 20px; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }}
       #pdf-report-body h1 {{ color: #4F46E5; border-bottom: 2px solid #e0e7ff; padding-bottom: 15px; margin-bottom: 25px; page-break-after: avoid; }}
       #pdf-report-body h2 {{ color: #312E81; margin-top: 35px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; page-break-after: avoid; }}
       #pdf-report-body h3 {{ color: #4338CA; margin-top: 25px; margin-bottom: 10px; page-break-after: avoid; }}
@@ -293,7 +295,7 @@ def st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti):
     </head>
     <body>
 
-    <div style="position: absolute; left: 0; top: 0; width: 800px; background-color: white; opacity: 0.01; z-index: -10; pointer-events: none;">
+    <div style="position: absolute; left: 0; top: 0; width: 780px; background-color: white; opacity: 0.01; z-index: -10; pointer-events: none;">
       <div id="pdf-report-body">
         {html_content}
       </div>
@@ -308,10 +310,10 @@ def st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti):
       var element = document.getElementById('pdf-report-body');
       
       var opt = {{
-        margin: [15, 15, 15, 15],
+        margin: [10, 10, 10, 10],
         filename: 'Report_Scenario_Planning_#{sid}.pdf',
         image: {{ type: 'jpeg', quality: 0.98 }},
-        html2canvas: {{ scale: 2, useCORS: true, windowWidth: 800, x: 0, y: 0, scrollX: 0, scrollY: 0 }},
+        html2canvas: {{ scale: 2, useCORS: true, windowWidth: 780, windowHeight: window.innerHeight, x: 0, y: 0, scrollX: 0, scrollY: 0 }},
         jsPDF: {{ unit: 'mm', format: 'a4', orientation: 'portrait' }},
         pagebreak: {{ mode: ['avoid-all', 'css', 'legacy'] }},
         enableLinks: true

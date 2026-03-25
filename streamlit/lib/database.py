@@ -2,32 +2,133 @@ import sqlite3
 import json
 import random
 import string
+import os
 from pathlib import Path
+import streamlit as st
 
 DB_PATH = Path(__file__).parent.parent / "foresight.db"
 
+def get_db_url():
+    try:
+        url = st.secrets.get("DATABASE_URL")
+        if url: return url
+    except Exception:
+        pass
+    return os.environ.get("DATABASE_URL")
+
+DB_URL = get_db_url()
+IS_POSTGRES = bool(DB_URL and DB_URL.startswith("postgres"))
+
+if IS_POSTGRES:
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
 
 def get_conn():
-    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    return conn
+    if IS_POSTGRES:
+        conn = psycopg2.connect(DB_URL, cursor_factory=RealDictCursor)
+        conn.autocommit = True
+        return conn
+    else:
+        conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        return conn
+
+def exec_query(query, params=(), fetch=None, return_id=False):
+    conn = get_conn()
+    try:
+        if IS_POSTGRES:
+            q = query.replace("?", "%s")
+            q = q.replace("INTEGER PRIMARY KEY AUTOINCREMENT", "SERIAL PRIMARY KEY")
+            
+            if q.startswith("INSERT OR REPLACE INTO voto"):
+                q = q.replace("INSERT OR REPLACE INTO voto", "INSERT INTO voto")
+                q += " ON CONFLICT (partecipante_id, fenomeno_id) DO UPDATE SET posizione = EXCLUDED.posizione"
+                
+            if return_id:
+                q += " RETURNING id"
+                
+            cur = conn.cursor()
+            cur.execute(q, params)
+            
+            if return_id:
+                res = cur.fetchone()
+                val = res['id'] if res else None
+                conn.close()
+                return val
+                
+            if fetch == 'all':
+                res = cur.fetchall()
+                conn.close()
+                return [dict(r) for r in res]
+            elif fetch == 'one':
+                res = cur.fetchone()
+                conn.close()
+                return dict(res) if res else None
+                
+            conn.close()
+            return None
+        else:
+            cur = conn.execute(query, params)
+            
+            if fetch == 'all':
+                res = cur.fetchall()
+                conn.commit()
+                conn.close()
+                return [dict(r) for r in res]
+            elif fetch == 'one':
+                res = cur.fetchone()
+                conn.commit()
+                conn.close()
+                return dict(res) if res else None
+                
+            if return_id:
+                val = cur.lastrowid
+                conn.commit()
+                conn.close()
+                return val
+                
+            conn.commit()
+            conn.close()
+    except Exception as e:
+        conn.close()
+        raise e
+
+def executescript(script):
+    if IS_POSTGRES:
+        script = script.replace("INTEGER PRIMARY KEY AUTOINCREMENT", "SERIAL PRIMARY KEY")
+        conn = get_conn()
+        try:
+            cur = conn.cursor()
+            cur.execute(script)
+        except Exception:
+            pass
+        finally:
+            conn.close()
+    else:
+        conn = get_conn()
+        try:
+            conn.executescript(script)
+            conn.commit()
+        except Exception:
+            pass
+        finally:
+            conn.close()
 
 
 def init_db():
-    conn = get_conn()
     try:
-        conn.execute("ALTER TABLE scenario ADD COLUMN partecipante_id INTEGER REFERENCES partecipante(id)")
+        exec_query("ALTER TABLE scenario ADD COLUMN partecipante_id INTEGER REFERENCES partecipante(id)")
     except Exception:
         pass
     try:
-        conn.execute("ALTER TABLE scenario ADD COLUMN locked_by_partecipante_id INTEGER REFERENCES partecipante(id)")
-        conn.execute("ALTER TABLE scenario ADD COLUMN titolo_finale TEXT")
-        conn.execute("ALTER TABLE scenario ADD COLUMN narrativa_finale TEXT")
-        conn.execute("ALTER TABLE scenario ADD COLUMN minacce_finale TEXT DEFAULT '[]'")
-        conn.execute("ALTER TABLE scenario ADD COLUMN opportunita_finale TEXT DEFAULT '[]'")
+        exec_query("ALTER TABLE scenario ADD COLUMN locked_by_partecipante_id INTEGER REFERENCES partecipante(id)")
+        exec_query("ALTER TABLE scenario ADD COLUMN titolo_finale TEXT")
+        exec_query("ALTER TABLE scenario ADD COLUMN narrativa_finale TEXT")
+        exec_query("ALTER TABLE scenario ADD COLUMN minacce_finale TEXT DEFAULT '[]'")
+        exec_query("ALTER TABLE scenario ADD COLUMN opportunita_finale TEXT DEFAULT '[]'")
     except Exception:
         pass
-    conn.executescript("""
+    script = """
         CREATE TABLE IF NOT EXISTS sessione (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             codice TEXT UNIQUE,
@@ -94,8 +195,14 @@ def init_db():
             key_points_data TEXT DEFAULT '{}',
             step_corrente TEXT DEFAULT 'intro',
             partecipante_id INTEGER,
+            locked_by_partecipante_id INTEGER,
+            titolo_finale TEXT,
+            narrativa_finale TEXT,
+            minacce_finale TEXT DEFAULT '[]',
+            opportunita_finale TEXT DEFAULT '[]',
             FOREIGN KEY (sessione_id) REFERENCES sessione(id),
-            FOREIGN KEY (partecipante_id) REFERENCES partecipante(id)
+            FOREIGN KEY (partecipante_id) REFERENCES partecipante(id),
+            FOREIGN KEY (locked_by_partecipante_id) REFERENCES partecipante(id)
         );
 
         CREATE TABLE IF NOT EXISTS messaggio (
@@ -106,9 +213,8 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (scenario_id) REFERENCES scenario(id)
         );
-    """)
-    conn.commit()
-    conn.close()
+    """
+    executescript(script)
 
 
 # ── Utilità ───────────────────────────────────────────────
@@ -116,61 +222,47 @@ def init_db():
 def genera_codice(n=6):
     return "".join(random.choices(string.ascii_uppercase, k=n))
 
-
 # ── Sessione ──────────────────────────────────────────────
 
 def crea_sessione(domanda, frame, key_points, fenomeni):
-    conn = get_conn()
     # Genera codice univoco
     for _ in range(20):
         codice = genera_codice(6)
-        existing = conn.execute("SELECT id FROM sessione WHERE codice = ?", (codice,)).fetchone()
+        existing = exec_query("SELECT id FROM sessione WHERE codice = ?", (codice,), fetch='one')
         if not existing:
             break
-    cur = conn.execute(
+            
+    sid = exec_query(
         "INSERT INTO sessione (codice, domanda_ricerca, frame_temporale, key_points) VALUES (?, ?, ?, ?)",
-        (codice, domanda, frame, json.dumps(key_points, ensure_ascii=False))
+        (codice, domanda, frame, json.dumps(key_points, ensure_ascii=False)),
+        return_id=True
     )
-    sid = cur.lastrowid
+    
     for i, f in enumerate(fenomeni):
-        conn.execute(
+        exec_query(
             "INSERT INTO fenomeno (sessione_id, testo, descrizione, priorita) VALUES (?, ?, ?, ?)",
             (sid, f["testo"], f.get("descrizione", ""), i)
         )
-    conn.commit()
-    conn.close()
     return sid
 
-
-def _parse_sessione(row):
-    if not row:
+def _parse_sessione(d):
+    if not d:
         return None
-    d = dict(row)
     try:
         d["key_points"] = json.loads(d["key_points"])
     except Exception:
         d["key_points"] = []
     return d
 
-
 def get_sessione_by_id(sid):
-    conn = get_conn()
-    row = conn.execute("SELECT * FROM sessione WHERE id = ?", (sid,)).fetchone()
-    conn.close()
-    return _parse_sessione(row)
-
+    return _parse_sessione(exec_query("SELECT * FROM sessione WHERE id = ?", (sid,), fetch='one'))
 
 def get_sessione_by_codice(codice):
-    conn = get_conn()
-    row = conn.execute("SELECT * FROM sessione WHERE codice = ?", (codice.upper(),)).fetchone()
-    conn.close()
-    return _parse_sessione(row)
-
+    return _parse_sessione(exec_query("SELECT * FROM sessione WHERE codice = ?", (codice.upper(),), fetch='one'))
 
 # Alias per compatibilità
 def get_sessione(sid):
     return get_sessione_by_id(sid)
-
 
 def aggiorna_sessione(sid, **kwargs):
     if not kwargs:
@@ -179,137 +271,73 @@ def aggiorna_sessione(sid, **kwargs):
         kwargs["key_points"] = json.dumps(kwargs["key_points"], ensure_ascii=False)
     fields = ", ".join(f"{k} = ?" for k in kwargs)
     values = list(kwargs.values()) + [sid]
-    conn = get_conn()
-    conn.execute(f"UPDATE sessione SET {fields} WHERE id = ?", values)
-    conn.commit()
-    conn.close()
-
+    exec_query(f"UPDATE sessione SET {fields} WHERE id = ?", values)
 
 def lista_sessioni():
-    conn = get_conn()
-    rows = conn.execute(
-        "SELECT id, codice, domanda_ricerca, frame_temporale, stato, created_at FROM sessione ORDER BY created_at DESC"
-    ).fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
-
+    return exec_query("SELECT id, codice, domanda_ricerca, frame_temporale, stato, created_at FROM sessione ORDER BY created_at DESC", fetch='all')
 
 # ── Fenomeni ──────────────────────────────────────────────
 
 def get_fenomeni(sessione_id):
-    conn = get_conn()
-    rows = conn.execute(
-        "SELECT * FROM fenomeno WHERE sessione_id = ? ORDER BY priorita ASC",
-        (sessione_id,)
-    ).fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
-
+    return exec_query("SELECT * FROM fenomeno WHERE sessione_id = ? ORDER BY priorita ASC", (sessione_id,), fetch='all')
 
 def aggiungi_fenomeno(sessione_id, testo, descrizione=""):
-    conn = get_conn()
-    conn.execute(
+    exec_query(
         "INSERT INTO fenomeno (sessione_id, testo, descrizione, priorita) VALUES (?, ?, ?, ?)",
         (sessione_id, testo, descrizione, 999)
     )
-    conn.commit()
-    conn.close()
-
 
 def elimina_fenomeno(fid):
-    conn = get_conn()
-    conn.execute("DELETE FROM fenomeno WHERE id = ?", (fid,))
-    conn.commit()
-    conn.close()
-
+    exec_query("DELETE FROM fenomeno WHERE id = ?", (fid,))
 
 def elimina_sessione(sessione_id):
-    """Elimina una sessione e tutti i dati collegati (cascata manuale)."""
-    conn = get_conn()
-    conn.execute("""
-        DELETE FROM voto WHERE partecipante_id IN (
-            SELECT id FROM partecipante WHERE sessione_id = ?
-        )
-    """, (sessione_id,))
-    conn.execute("""
-        DELETE FROM messaggio WHERE scenario_id IN (
-            SELECT id FROM scenario WHERE sessione_id = ?
-        )
-    """, (sessione_id,))
-    conn.execute("DELETE FROM scenario WHERE sessione_id = ?", (sessione_id,))
-    conn.execute("DELETE FROM partecipante WHERE sessione_id = ?", (sessione_id,))
-    conn.execute("DELETE FROM fenomeno WHERE sessione_id = ?", (sessione_id,))
-    conn.execute("DELETE FROM sessione WHERE id = ?", (sessione_id,))
-    conn.commit()
-    conn.close()
-
+    exec_query("DELETE FROM voto WHERE partecipante_id IN (SELECT id FROM partecipante WHERE sessione_id = ?)", (sessione_id,))
+    exec_query("DELETE FROM messaggio WHERE scenario_id IN (SELECT id FROM scenario WHERE sessione_id = ?)", (sessione_id,))
+    exec_query("DELETE FROM scenario WHERE sessione_id = ?", (sessione_id,))
+    exec_query("DELETE FROM partecipante WHERE sessione_id = ?", (sessione_id,))
+    exec_query("DELETE FROM fenomeno WHERE sessione_id = ?", (sessione_id,))
+    exec_query("DELETE FROM sessione WHERE id = ?", (sessione_id,))
 
 def aggiorna_priorita_fenomeni(sessione_id, ordine_ids):
-    conn = get_conn()
     for i, fid in enumerate(ordine_ids):
-        conn.execute(
+        exec_query(
             "UPDATE fenomeno SET priorita = ? WHERE id = ? AND sessione_id = ?",
             (i, fid, sessione_id)
         )
-    conn.commit()
-    conn.close()
-
 
 # ── Partecipanti ──────────────────────────────────────────
 
 def registra_partecipante(sessione_id, nome):
-    conn = get_conn()
-    cur = conn.execute(
+    pid = exec_query(
         "INSERT INTO partecipante (sessione_id, nome) VALUES (?, ?)",
-        (sessione_id, nome)
+        (sessione_id, nome),
+        return_id=True
     )
-    pid = cur.lastrowid
-    conn.commit()
-    conn.close()
     return {"id": pid, "nome": nome, "sessione_id": sessione_id}
 
-
 def get_partecipanti(sessione_id):
-    conn = get_conn()
-    rows = conn.execute(
-        "SELECT * FROM partecipante WHERE sessione_id = ? ORDER BY id ASC",
-        (sessione_id,)
-    ).fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
-
+    return exec_query("SELECT * FROM partecipante WHERE sessione_id = ? ORDER BY id ASC", (sessione_id,), fetch='all')
 
 def aggiorna_partecipante(pid, **kwargs):
     if not kwargs:
         return
     fields = ", ".join(f"{k} = ?" for k in kwargs)
     values = list(kwargs.values()) + [pid]
-    conn = get_conn()
-    conn.execute(f"UPDATE partecipante SET {fields} WHERE id = ?", values)
-    conn.commit()
-    conn.close()
-
+    exec_query(f"UPDATE partecipante SET {fields} WHERE id = ?", values)
 
 # ── Voti ──────────────────────────────────────────────────
 
 def salva_voti(partecipante_id, ranking):
-    """ranking è lista di {fenomeno_id, posizione}"""
-    conn = get_conn()
-    conn.execute("DELETE FROM voto WHERE partecipante_id = ?", (partecipante_id,))
+    exec_query("DELETE FROM voto WHERE partecipante_id = ?", (partecipante_id,))
     for v in ranking:
-        conn.execute(
+        exec_query(
             "INSERT OR REPLACE INTO voto (partecipante_id, fenomeno_id, posizione) VALUES (?, ?, ?)",
             (partecipante_id, v["fenomeno_id"], v["posizione"])
         )
-    conn.execute("UPDATE partecipante SET votato = 1 WHERE id = ?", (partecipante_id,))
-    conn.commit()
-    conn.close()
-
+    exec_query("UPDATE partecipante SET votato = 1 WHERE id = ?", (partecipante_id,))
 
 def get_voti_aggregati(sessione_id):
-    """Ritorna lista {fenomeno_id, media_posizione, conteggio} ordinata per media ASC"""
-    conn = get_conn()
-    rows = conn.execute(
+    return exec_query(
         """
         SELECT v.fenomeno_id, AVG(v.posizione) as media_posizione, COUNT(v.id) as conteggio
         FROM voto v
@@ -318,47 +346,38 @@ def get_voti_aggregati(sessione_id):
         GROUP BY v.fenomeno_id
         ORDER BY media_posizione ASC
         """,
-        (sessione_id,)
-    ).fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
-
+        (sessione_id,),
+        fetch='all'
+    )
 
 # ── Scenari ───────────────────────────────────────────────
 
 def crea_scenari(sessione_id):
     quadranti = [(1, "++"), (2, "+-"), (3, "-+"), (4, "--")]
     quad_map = {1: "++", 2: "+-", 3: "-+", 4: "--"}
-    conn = get_conn()
-    conn.execute("DELETE FROM scenario WHERE sessione_id = ?", (sessione_id,))
     
-    # 1. Crea scenari di gruppo
+    exec_query("DELETE FROM scenario WHERE sessione_id = ?", (sessione_id,))
+    
     for n, q in quadranti:
-        conn.execute(
+        exec_query(
             "INSERT INTO scenario (sessione_id, numero, quadrante) VALUES (?, ?, ?)",
             (sessione_id, n, q)
         )
         
-    # 2. Crea scenari individuali
-    partecipanti = conn.execute("SELECT id, gruppo_numero FROM partecipante WHERE sessione_id = ? AND gruppo_numero IS NOT NULL", (sessione_id,)).fetchall()
-    for p in partecipanti:
+    partecipanti = exec_query("SELECT id, gruppo_numero FROM partecipante WHERE sessione_id = ? AND gruppo_numero IS NOT NULL", (sessione_id,), fetch='all')
+    for p in partecipanti or []:
         pid = p["id"]
         gnum = p["gruppo_numero"]
         if gnum in quad_map:
             q = quad_map[gnum]
-            conn.execute(
+            exec_query(
                 "INSERT INTO scenario (sessione_id, numero, quadrante, partecipante_id) VALUES (?, ?, ?, ?)",
                 (sessione_id, gnum, q, pid)
             )
 
-    conn.commit()
-    conn.close()
-
-
-def _parse_scenario(row):
-    if not row:
+def _parse_scenario(d):
+    if not d:
         return None
-    d = dict(row)
     for field in ["minacce", "opportunita", "minacce_finale", "opportunita_finale"]:
         try:
             val = d.get(field)
@@ -372,47 +391,34 @@ def _parse_scenario(row):
         d["key_points_data"] = {}
     return d
 
-
 def get_scenari(sessione_id):
-    conn = get_conn()
-    rows = conn.execute(
-        "SELECT * FROM scenario WHERE sessione_id = ? AND partecipante_id IS NULL ORDER BY numero",
-        (sessione_id,)
-    ).fetchall()
-    conn.close()
-    return [_parse_scenario(r) for r in rows]
+    rows = exec_query("SELECT * FROM scenario WHERE sessione_id = ? AND partecipante_id IS NULL ORDER BY numero", (sessione_id,), fetch='all')
+    return [_parse_scenario(r) for r in (rows or [])]
 
 def get_scenari_individuali(sessione_id, gruppo_numero=None):
-    conn = get_conn()
     if gruppo_numero:
-        rows = conn.execute(
+        rows = exec_query(
             "SELECT * FROM scenario WHERE sessione_id = ? AND partecipante_id IS NOT NULL AND numero = ? ORDER BY id",
-            (sessione_id, gruppo_numero)
-        ).fetchall()
+            (sessione_id, gruppo_numero),
+            fetch='all'
+        )
     else:
-        rows = conn.execute(
+        rows = exec_query(
             "SELECT * FROM scenario WHERE sessione_id = ? AND partecipante_id IS NOT NULL ORDER BY numero",
-            (sessione_id,)
-        ).fetchall()
-    conn.close()
-    return [_parse_scenario(r) for r in rows]
+            (sessione_id,),
+            fetch='all'
+        )
+    return [_parse_scenario(r) for r in (rows or [])]
 
 def get_scenario_individuale(sessione_id, partecipante_id):
-    conn = get_conn()
-    row = conn.execute(
+    return _parse_scenario(exec_query(
         "SELECT * FROM scenario WHERE sessione_id = ? AND partecipante_id = ?",
-        (sessione_id, partecipante_id)
-    ).fetchone()
-    conn.close()
-    return _parse_scenario(row)
-
+        (sessione_id, partecipante_id),
+        fetch='one'
+    ))
 
 def get_scenario(scenario_id):
-    conn = get_conn()
-    row = conn.execute("SELECT * FROM scenario WHERE id = ?", (scenario_id,)).fetchone()
-    conn.close()
-    return _parse_scenario(row)
-
+    return _parse_scenario(exec_query("SELECT * FROM scenario WHERE id = ?", (scenario_id,), fetch='one'))
 
 def aggiorna_scenario(scenario_id, **kwargs):
     if not kwargs:
@@ -422,51 +428,31 @@ def aggiorna_scenario(scenario_id, **kwargs):
             kwargs[k] = json.dumps(kwargs[k], ensure_ascii=False)
     fields = ", ".join(f"{k} = ?" for k in kwargs)
     values = list(kwargs.values()) + [scenario_id]
-    conn = get_conn()
-    conn.execute(f"UPDATE scenario SET {fields} WHERE id = ?", values)
-    conn.commit()
-    conn.close()
-
+    exec_query(f"UPDATE scenario SET {fields} WHERE id = ?", values)
 
 # ── Messaggi ──────────────────────────────────────────────
 
 def get_messaggi(scenario_id):
-    conn = get_conn()
-    rows = conn.execute(
-        "SELECT * FROM messaggio WHERE scenario_id = ? ORDER BY created_at ASC",
-        (scenario_id,)
-    ).fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
-
+    return exec_query("SELECT * FROM messaggio WHERE scenario_id = ? ORDER BY created_at ASC", (scenario_id,), fetch='all')
 
 def aggiungi_messaggio(scenario_id, ruolo, contenuto):
-    conn = get_conn()
-    conn.execute(
+    exec_query(
         "INSERT INTO messaggio (scenario_id, ruolo, contenuto) VALUES (?, ?, ?)",
         (scenario_id, ruolo, contenuto)
     )
-    conn.commit()
-    conn.close()
 
 # ── Modelli (Templates) ───────────────────────────────────
 
 def crea_modello(nome, domanda_ricerca, frame_temporale, key_points, fenomeni_raw):
-    conn = get_conn()
-    conn.execute(
+    exec_query(
         "INSERT INTO modello (nome, domanda_ricerca, frame_temporale, key_points, fenomeni_raw) VALUES (?, ?, ?, ?, ?)",
         (nome, domanda_ricerca, frame_temporale, json.dumps(key_points, ensure_ascii=False), fenomeni_raw)
     )
-    conn.commit()
-    conn.close()
 
 def get_modelli():
-    conn = get_conn()
-    rows = conn.execute("SELECT * FROM modello ORDER BY created_at DESC").fetchall()
-    conn.close()
+    rows = exec_query("SELECT * FROM modello ORDER BY created_at DESC", fetch='all')
     res = []
-    for r in rows:
-        d = dict(r)
+    for d in (rows or []):
         try:
             d["key_points"] = json.loads(d["key_points"])
         except Exception:
@@ -475,12 +461,9 @@ def get_modelli():
     return res
 
 def get_modello_by_id(modello_id):
-    conn = get_conn()
-    row = conn.execute("SELECT * FROM modello WHERE id = ?", (modello_id,)).fetchone()
-    conn.close()
-    if not row:
+    d = exec_query("SELECT * FROM modello WHERE id = ?", (modello_id,), fetch='one')
+    if not d:
         return None
-    d = dict(row)
     try:
         d["key_points"] = json.loads(d["key_points"])
     except Exception:
@@ -488,7 +471,4 @@ def get_modello_by_id(modello_id):
     return d
 
 def elimina_modello(modello_id):
-    conn = get_conn()
-    conn.execute("DELETE FROM modello WHERE id = ?", (modello_id,))
-    conn.commit()
-    conn.close()
+    exec_query("DELETE FROM modello WHERE id = ?", (modello_id,))

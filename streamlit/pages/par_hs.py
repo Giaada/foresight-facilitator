@@ -114,7 +114,11 @@ try:
 except ImportError:
     SORTABLE = False
 
-fenomeni_testi = [f["testo"] for f in fenomeni]
+def fmt_fen(f):
+    return f"{f['testo']} ℹ️" if f.get("descrizione") else f["testo"]
+
+fenomeni_map = {fmt_fen(f): f for f in fenomeni}
+fenomeni_testi = list(fenomeni_map.keys())
 fenomeni_set = set(fenomeni_testi)
 
 # Inizializza ranking in session state se non presente
@@ -143,6 +147,7 @@ if SORTABLE:
     st.session_state["ranking_items"] = sorted_items
 
     st.markdown("**Ordine attuale (1 = più rilevante):**")
+    st.caption("Passa il cursore sul testo dei fenomeni (specie quelli con ℹ️) per leggerne la descrizione completa.")
     for i, testo in enumerate(sorted_items):
         col_n, col_t = st.columns([1, 8])
         with col_n:
@@ -152,24 +157,32 @@ if SORTABLE:
                 unsafe_allow_html=True,
             )
         with col_t:
-            st.markdown(f"{'**' if i < 3 else ''}{testo}{'**' if i < 3 else ''}")
+            f_obj = fenomeni_map.get(testo)
+            desc = f_obj.get("descrizione") if f_obj else None
+            st.markdown(f"{'**' if i < 3 else ''}{testo}{'**' if i < 3 else ''}", help=desc if desc else None)
 
     ranking_finale = sorted_items
 
 else:
     st.info("💡 Drag & drop non disponibile. Usa i numeri per assegnare la priorità (1 = più rilevante).")
+    st.caption("Passa il cursore sul nome del fenomeno per leggerne la descrizione.")
     nuovi_ordini = {}
     for f in fenomeni:
-        nuovi_ordini[f["id"]] = st.number_input(
-            f["testo"],
-            min_value=1,
-            max_value=len(fenomeni),
-            value=fenomeni.index(f) + 1,
-            key=f"prio_par_{f['id']}",
-        )
+        col_ip, col_name = st.columns([1, 4])
+        with col_ip:
+            nuovi_ordini[f["id"]] = st.number_input(
+                "Pos",
+                min_value=1,
+                max_value=len(fenomeni),
+                value=fenomeni.index(f) + 1,
+                key=f"prio_par_{f['id']}",
+                label_visibility="collapsed"
+            )
+        with col_name:
+            st.markdown(f"**{fmt_fen(f)}**", help=f.get('descrizione') if f.get('descrizione') else None)
     ordinato = sorted(nuovi_ordini.items(), key=lambda x: x[1])
     ranking_finale = [
-        next(f["testo"] for f in fenomeni if f["id"] == fid)
+        next(fmt_fen(f) for f in fenomeni if f["id"] == fid)
         for fid, _ in ordinato
     ]
 
@@ -208,7 +221,9 @@ st.subheader("✅ Conferma il tuo ranking")
 st.caption("Una volta confermato, non potrai modificare il tuo voto.")
 
 if st.button("Conferma il mio ranking", type="primary", use_container_width=True):
-    id_map = {f["testo"]: f["id"] for f in get_fenomeni(sessione_id)}
+    def lfmt(f):
+        return f"{f['testo']} ℹ️" if f.get("descrizione") else f["testo"]
+    id_map = {lfmt(f): f["id"] for f in get_fenomeni(sessione_id)}
     ranking_voti = []
     for pos, testo in enumerate(ranking_finale):
         fid = id_map.get(testo)

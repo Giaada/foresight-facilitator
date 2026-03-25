@@ -290,6 +290,12 @@ def aggiungi_fenomeno(sessione_id, testo, descrizione=""):
 def elimina_fenomeno(fid):
     exec_query("DELETE FROM fenomeno WHERE id = ?", (fid,))
 
+def aggiorna_fenomeno(fid, testo, descrizione=""):
+    exec_query(
+        "UPDATE fenomeno SET testo = ?, descrizione = ? WHERE id = ?",
+        (testo, descrizione, fid)
+    )
+
 def elimina_sessione(sessione_id):
     exec_query("DELETE FROM voto WHERE partecipante_id IN (SELECT id FROM partecipante WHERE sessione_id = ?)", (sessione_id,))
     exec_query("DELETE FROM messaggio WHERE scenario_id IN (SELECT id FROM scenario WHERE sessione_id = ?)", (sessione_id,))

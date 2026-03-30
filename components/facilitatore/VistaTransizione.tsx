@@ -4,6 +4,7 @@ import { ChevronRight, GripVertical, Users } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { QuadrantVisualizer } from "@/components/ui/QuadrantVisualizer";
 
 interface Fenomeno {
   id: string;
@@ -194,6 +195,21 @@ export function VistaTransizione({ dati, codiceFacilitatore, onAvviaScenarioPlan
           </Card>
         ))}
       </div>
+
+      {/* Preview Assi Generati */}
+      {driver1.nome && driver2.nome && (
+        <Card className="flex flex-col items-center py-6">
+          <h3 className="text-sm font-semibold text-gray-700 mb-6">Mappa Quadranti</h3>
+          <QuadrantVisualizer
+            quadrante={null}
+            d1Pos={driver1.posPolo}
+            d1Neg={driver1.negPolo}
+            d2Pos={driver2.posPolo}
+            d2Neg={driver2.negPolo}
+            size="lg"
+          />
+        </Card>
+      )}
 
       {/* Matrice 2x2 con assegnazione gruppi */}
       <Card>

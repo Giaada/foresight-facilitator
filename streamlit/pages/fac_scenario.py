@@ -11,6 +11,7 @@ from lib.database import (
     get_scenari_individuali, get_partecipanti
 )
 from lib.agent import unisci_scenari_gruppo
+from lib.quadrant_ui import draw_quadrant_matrix
 
 check_facilitatore()
 
@@ -147,6 +148,13 @@ elif stato in ("scenario_planning_gruppo", "concluso"):
             asse_x = (sessione.get("driver1_pos") if sc_g["quadrante"][0] == "+" else sessione.get("driver1_neg")) or d1
             asse_y = (sessione.get("driver2_pos") if sc_g["quadrante"][1] == "+" else sessione.get("driver2_neg")) or d2
             st.markdown(f"**Quadrante:** `{sc_g['quadrante']}` — {asse_x} × {asse_y}")
+            
+            # Matrice grafica centrata inline
+            d1p = sessione.get("driver1_pos") or f"{d1} Alto"
+            d1n = sessione.get("driver1_neg") or f"{d1} Basso"
+            d2p = sessione.get("driver2_pos") or f"{d2} Alto"
+            d2n = sessione.get("driver2_neg") or f"{d2} Basso"
+            st.markdown(draw_quadrant_matrix(sc_g["quadrante"], d1p, d1n, d2p, d2n), unsafe_allow_html=True)
 
             col_orig, col_final = st.columns(2)
             

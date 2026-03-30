@@ -4,6 +4,7 @@ import { CheckCircle, Clock, MessageSquare, FileText, ChevronDown, ChevronUp } f
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { QuadrantVisualizer } from "@/components/ui/QuadrantVisualizer";
 
 const LABEL_STEP: Record<string, string> = {
   intro: "Introduzione",
@@ -146,9 +147,22 @@ export function VistaScenarioPlanning({ dati, onChiudiSessione, onAggiorna }: Pr
               </div>
 
               {/* Dettaglio espanso */}
-              {aperto && gruppo.scenarioOutput && (
-                <div className="mt-4 border-t pt-4 space-y-3 text-sm">
-                  {gruppo.scenarioOutput.narrativa && (
+              {aperto && (
+                <div className="mt-4 border-t pt-4 space-y-3 text-sm flex flex-col items-center lg:items-start lg:flex-row gap-6">
+                  <div className="shrink-0 pt-2 px-6 shadow-sm bg-slate-50 border rounded-xl flex items-center justify-center">
+                    <QuadrantVisualizer
+                      quadrante={gruppo.quadrante}
+                      d1Pos={dati.driver1PosPolo || "Alto"}
+                      d1Neg={dati.driver1NegPolo || "Basso"}
+                      d2Pos={dati.driver2PosPolo || "Alto"}
+                      d2Neg={dati.driver2NegPolo || "Basso"}
+                      size="sm"
+                    />
+                  </div>
+                  <div className="flex-1 space-y-3 w-full">
+                  {gruppo.scenarioOutput && (
+                    <>
+                    {gruppo.scenarioOutput.narrativa && (
                     <div>
                       <p className="text-xs font-semibold text-gray-500 mb-1">Narrativa</p>
                       <p className="text-gray-700 text-xs leading-relaxed bg-white rounded-lg p-3 border">
@@ -180,6 +194,9 @@ export function VistaScenarioPlanning({ dati, onChiudiSessione, onAggiorna }: Pr
                       </ul>
                     </div>
                   )}
+                  </>
+                  )}
+                  </div>
                 </div>
               )}
             </Card>

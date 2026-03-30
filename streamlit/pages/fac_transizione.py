@@ -9,6 +9,7 @@ from lib.database import (
     get_sessione_by_id, aggiorna_sessione, get_fenomeni,
     get_partecipanti, aggiorna_partecipante, crea_scenari, get_voti_aggregati
 )
+from lib.quadrant_ui import draw_quadrant_matrix
 
 check_facilitatore()
 
@@ -145,26 +146,8 @@ if sessione.get("driver1_nome") and sessione.get("driver2_nome"):
     d2p = sessione.get("driver2_pos") or f"{d2} alto"
     d2n = sessione.get("driver2_neg") or f"{d2} basso"
 
-    st.markdown(f"<div style='text-align:center;color:#6B7280;font-size:0.85em'>↑ {d2p}</div>", unsafe_allow_html=True)
-
-    q_col1, q_col2 = st.columns(2)
-    with q_col1:
-        with st.container(border=True):
-            st.markdown("**Scenario 3** `-+`")
-            st.caption(f"{d1n} × {d2p}")
-        with st.container(border=True):
-            st.markdown("**Scenario 4** `--`")
-            st.caption(f"{d1n} × {d2n}")
-    with q_col2:
-        with st.container(border=True):
-            st.markdown("**Scenario 1** `++`")
-            st.caption(f"{d1p} × {d2p}")
-        with st.container(border=True):
-            st.markdown("**Scenario 2** `+-`")
-            st.caption(f"{d1p} × {d2n}")
-
-    st.markdown(f"<div style='text-align:center;color:#6B7280;font-size:0.85em'>↓ {d2n}</div>", unsafe_allow_html=True)
-    st.caption(f"← {d1n} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {d1p} →", unsafe_allow_html=True)
+    # Render grafica
+    st.markdown(draw_quadrant_matrix(None, d1p, d1n, d2p, d2n), unsafe_allow_html=True)
 
     st.divider()
 

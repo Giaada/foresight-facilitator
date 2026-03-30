@@ -8,6 +8,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from lib.auth import check_facilitatore
 from lib.database import get_sessione_by_id, get_scenari, get_fenomeni, get_voti_aggregati
+from lib.quadrant_ui import draw_quadrant_matrix
 
 check_facilitatore()
 
@@ -105,33 +106,7 @@ if scenari and sessione.get("driver1_nome"):
 
     sc_map = {s["quadrante"]: s for s in scenari}
 
-    st.markdown(
-        f"<div style='text-align:center;color:#6B7280;font-size:0.85em'>↑ {d2p}</div>",
-        unsafe_allow_html=True,
-    )
-
-    m_col1, m_col2 = st.columns(2)
-    for col, (q1, q2) in zip([m_col1, m_col2], [("-+", "++"), ("--", "+-")]):
-        with col:
-            for q in [q1, q2]:
-                sc = sc_map.get(q)
-                if sc:
-                    with st.container(border=True):
-                        titolo = sc.get("titolo") or f"Scenario {sc['numero']}"
-                        st.markdown(f"**{titolo}** `{q}`")
-                        asse_x = d1p if q[0] == "+" else d1n
-                        asse_y = d2p if q[1] == "+" else d2n
-                        st.caption(f"{asse_x} × {asse_y}")
-                        if sc.get("narrativa"):
-                            st.markdown(
-                                sc["narrativa"][:150] + ("..." if len(sc["narrativa"]) > 150 else "")
-                            )
-
-    st.markdown(
-        f"<div style='text-align:center;color:#6B7280;font-size:0.85em'>↓ {d2n}</div>",
-        unsafe_allow_html=True,
-    )
-    st.caption(f"← {d1n} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {d1p} →", unsafe_allow_html=True)
+    st.markdown(draw_quadrant_matrix(None, d1p, d1n, d2p, d2n), unsafe_allow_html=True)
 
 st.divider()
 

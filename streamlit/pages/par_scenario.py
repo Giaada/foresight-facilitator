@@ -9,6 +9,7 @@ from lib.database import (
     get_messaggi, get_partecipanti, get_scenario_individuale, aggiorna_scenario
 )
 from lib.agent import invia_messaggio, avvia_scenario
+from lib.quadrant_ui import draw_quadrant_matrix
 
 # ── Leggi partecipante dalla session ─────────────────────
 partecipante = st.session_state.get("partecipante")
@@ -113,19 +114,8 @@ css_matrix = f"""
     </h3>
     <p style="line-height: 1.6; margin:0;">Il vostro gruppo sta attivamente esplorando l'incrocio tra <strong>{q_x}</strong> (sull'asse <em>{d1}</em>) e <strong>{q_y}</strong> (sull'asse <em>{d2}</em>).</p>
   </div>
-  <div style="display: flex; flex-direction: column; align-items: center; flex-shrink: 0;">
-    <div style="font-size: 11px; font-weight: bold; color: #9ca3af; margin-bottom: 4px; text-transform: capitalize;">{asse_y_pos}</div>
-    <div style="display: flex; align-items: center;">
-      <div style="font-size: 11px; font-weight: bold; color: #9ca3af; margin-right: 8px; writing-mode: vertical-rl; transform: rotate(180deg); text-transform: capitalize;">{asse_x_neg}</div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; width: 100px; height: 100px; border: 3px solid #334155; background-color: #f8fafc; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);">
-        <div style="border-right: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: center; background-color: {'#4f46e5' if sc['quadrante'] == '-+' else 'transparent'}; color: {'white' if sc['quadrante'] == '-+' else 'transparent'}; font-size: 10px; font-weight: bold; opacity: 0.8;">- +</div>
-        <div style="border-bottom: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: center; background-color: {'#4f46e5' if sc['quadrante'] == '++' else 'transparent'}; color: {'white' if sc['quadrante'] == '++' else 'transparent'}; font-size: 10px; font-weight: bold; opacity: 0.8;">+ +</div>
-        <div style="border-right: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: center; background-color: {'#4f46e5' if sc['quadrante'] == '--' else 'transparent'}; color: {'white' if sc['quadrante'] == '--' else 'transparent'}; font-size: 10px; font-weight: bold; opacity: 0.8;">- -</div>
-        <div style="display: flex; align-items: center; justify-content: center; background-color: {'#4f46e5' if sc['quadrante'] == '+-' else 'transparent'}; color: {'white' if sc['quadrante'] == '+-' else 'transparent'}; font-size: 10px; font-weight: bold; opacity: 0.8;">+ -</div>
-      </div>
-      <div style="font-size: 11px; font-weight: bold; color: #9ca3af; margin-left: 8px; writing-mode: vertical-rl; text-transform: capitalize;">{asse_x_pos}</div>
-    </div>
-    <div style="font-size: 11px; font-weight: bold; color: #9ca3af; margin-top: 4px; text-transform: capitalize;">{asse_y_neg}</div>
+  <div style="display: flex; flex-direction: column; align-items: center; flex-shrink: 0; padding-right: 20px;">
+    {draw_quadrant_matrix(sc['quadrante'], asse_x_pos, asse_x_neg, asse_y_pos, asse_y_neg)}
   </div>
 </div>
 """

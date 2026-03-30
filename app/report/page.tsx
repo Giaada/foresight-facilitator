@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import ReactMarkdown from "react-markdown";
 import { PrintButton } from "./PrintButton";
+import { QuadrantVisualizer } from "@/components/ui/QuadrantVisualizer";
 
 export const metadata = {
   title: "Report Sessione - Foresight",
@@ -80,16 +81,26 @@ export default async function ReportPage(props: { searchParams: Promise<{ sessio
 
                 return (
                   <div key={g.id} className="border border-indigo-100 rounded-lg p-6 bg-indigo-50/30 print:border-indigo-100 print:break-inside-avoid">
-                    <div className="flex justify-between items-start mb-6 border-b border-indigo-100 pb-4">
-                      <div>
+                    <div className="flex flex-col md:flex-row justify-between mb-6 border-b border-indigo-100 pb-4 gap-4">
+                      <div className="flex-1">
                         <h3 className="text-lg font-bold text-indigo-900 mb-1">
                           Gruppo {g.numero}: {out?.titolo || "Scenario Senza Titolo"}
                         </h3>
-                        <p className="text-sm font-medium text-indigo-600 bg-indigo-100/50 inline-block px-2 py-0.5 rounded">Quadrante: {g.quadrante}</p>
+                        <p className="text-sm font-medium text-indigo-600 bg-indigo-100/50 inline-block px-2 py-0.5 rounded mb-4">Quadrante: {g.quadrante}</p>
+                        <div className="text-xs text-gray-500 bg-white px-3 py-1.5 rounded-md border border-gray-100 inline-block">
+                          <strong className="block mb-0.5">Partecipanti:</strong>
+                          {g.partecipanti.length > 0 ? g.partecipanti.map((p: any) => p.nome).join(", ") : "Nessuno"}
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-500 text-right bg-white px-3 py-1.5 rounded-md border border-gray-100">
-                        <strong className="block mb-0.5">Partecipanti:</strong>
-                        {g.partecipanti.length > 0 ? g.partecipanti.map((p: any) => p.nome).join(", ") : "Nessuno"}
+                      <div className="shrink-0 bg-white p-2 rounded-xl border border-gray-100 shadow-sm print:hidden pr-6">
+                        <QuadrantVisualizer
+                          quadrante={g.quadrante}
+                          d1Pos={sessione.driver1PosPolo || "Alto"}
+                          d1Neg={sessione.driver1NegPolo || "Basso"}
+                          d2Pos={sessione.driver2PosPolo || "Alto"}
+                          d2Neg={sessione.driver2NegPolo || "Basso"}
+                          size="sm"
+                        />
                       </div>
                     </div>
 

@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Send, Bot, User, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { QuadrantVisualizer } from "@/components/ui/QuadrantVisualizer";
 import type { Socket } from "socket.io-client";
 
 interface Messaggio {
@@ -187,34 +188,15 @@ export function VistaScenarioPlanningGruppo({ partecipante, sessioneId, socket, 
           </div>
           
           {/* Griglia Visiva (Compass) */}
-          <div className="shrink-0 flex flex-col items-center">
-            {/* Label Y Alto */}
-            <div className="text-[11px] font-bold text-gray-400 capitalize mb-1">{driverInfo.d2Pos || 'Alto'}</div>
-            <div className="flex items-center">
-              {/* Label X Sinistra */}
-              <div className="text-[11px] font-bold text-gray-400 capitalize mr-2 rotate-180" style={{ writingMode: 'vertical-rl' }}>{driverInfo.d1Neg || 'Basso'}</div>
-              
-              {/* Matrice */}
-              <div className="grid grid-cols-2 grid-rows-2 w-28 h-28 border-[3px] border-slate-700 bg-slate-50 relative shadow-sm">
-                <div className={`border-r border-b border-slate-300 flex items-center justify-center transition-colors ${quadrante === '-+' ? 'bg-indigo-600 text-white shadow-inner' : ''}`}>
-                  <span className="opacity-50 text-[10px] font-mono tracking-tighter">- +</span>
-                </div>
-                <div className={`border-b border-slate-300 flex items-center justify-center transition-colors ${quadrante === '++' ? 'bg-indigo-600 text-white shadow-inner' : ''}`}>
-                  <span className="opacity-50 text-[10px] font-mono tracking-tighter">+ +</span>
-                </div>
-                <div className={`border-r border-slate-300 flex items-center justify-center transition-colors ${quadrante === '--' ? 'bg-indigo-600 text-white shadow-inner' : ''}`}>
-                  <span className="opacity-50 text-[10px] font-mono tracking-tighter">- -</span>
-                </div>
-                <div className={`flex items-center justify-center transition-colors ${quadrante === '+-' ? 'bg-indigo-600 text-white shadow-inner' : ''}`}>
-                  <span className="opacity-50 text-[10px] font-mono tracking-tighter">+ -</span>
-                </div>
-              </div>
-              
-              {/* Label X Destra */}
-              <div className="text-[11px] font-bold text-gray-400 capitalize ml-2" style={{ writingMode: 'vertical-rl' }}>{driverInfo.d1Pos || 'Alto'}</div>
-            </div>
-            {/* Label Y Basso */}
-            <div className="text-[11px] font-bold text-gray-400 capitalize mt-1">{driverInfo.d2Neg || 'Basso'}</div>
+          <div className="shrink-0 flex items-center justify-center p-2 pr-6">
+            <QuadrantVisualizer
+              quadrante={quadrante}
+              d1Pos={driverInfo.d1Pos || "Alto"}
+              d1Neg={driverInfo.d1Neg || "Basso"}
+              d2Pos={driverInfo.d2Pos || "Alto"}
+              d2Neg={driverInfo.d2Neg || "Basso"}
+              size="md"
+            />
           </div>
         </div>
       )}

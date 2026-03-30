@@ -242,47 +242,46 @@ if is_group_phase:
         
         st.divider()
         
-        # Re-fetch fresh session state to detect facilitator closing
-        sessione_aggiornata = get_sessione_by_id(sessione_id)
-        stato_aggiornato = sessione_aggiornata.get("stato") if sessione_aggiornata else stato
-        
-        sc_live = get_scenario(sc["id"])
-        if stato_aggiornato != "concluso":
-            if sc_live.get("step_corrente") == "concluso":
-                st.success("🏁 Avete dichiarato concluso il lavoro di gruppo! Il Facilitatore è stato avvisato.")
-                st.info("Attendete che il facilitatore chiuda ufficialmente la sessione per accedere al Report Finale.")
+        # ── Sezione stato e azioni di gruppo (auto-aggiornante) ──
+        @st.fragment(run_every=5)
+        def _stato_gruppo():
+            # Re-fetch fresh data
+            sessione_live = get_sessione_by_id(sessione_id)
+            stato_live = sessione_live.get("stato") if sessione_live else stato
+            sc_stato = get_scenario(sc["id"])
+            
+            if stato_live == "concluso":
+                # ── SESSIONE CONCLUSA: mostra report ──
+                st.success("🎉 Sessione completamente terminata! Ottimo lavoro.")
+                st.markdown("---")
+                st.markdown("### 📄 Report Finale")
+                st.info("Scarica il Report Finale completo con tutti gli scenari discussi oggi.")
                 
-                # Auto-poll per rilevare la chiusura della sessione da parte del facilitatore
-                @st.fragment(run_every=5)
-                def _attendi_chiusura_sessione():
-                    s = get_sessione_by_id(sessione_id)
-                    if s and s.get("stato") == "concluso":
-                        st.rerun(scope="app")
-                _attendi_chiusura_sessione()
+                from lib.database import get_fenomeni, get_voti_aggregati, get_partecipanti as _gp_pdf
+                from lib.pdf_export import st_scarica_pdf_report_finale
+                
+                fenomeni = get_fenomeni(sessione_id)
+                voti = get_voti_aggregati(sessione_id)
+                _par_pdf = _gp_pdf(sessione_id)
+                st_scarica_pdf_report_finale(sessione_live, get_scenari(sessione_id), fenomeni, voti, partecipanti=_par_pdf)
+                
+            elif sc_stato and sc_stato.get("step_corrente") == "concluso":
+                # ── GRUPPO HA DICHIARATO CONCLUSO, attende facilitatore ──
+                st.success("🏁 Avete dichiarato concluso il lavoro di gruppo!")
+                st.info("⏳ In attesa che il **facilitatore** chiuda ufficialmente la sessione per accedere al Report Finale.")
+                
             else:
+                # ── LAVORO DI GRUPPO IN CORSO ──
                 st.warning("Assicuratevi che la Versione Definitiva sia pronta prima di dichiarare concluso il lavoro.")
                 if st.button("✅ Dichiara Lavoro di Gruppo Concluso", type="primary", use_container_width=True, key="btn_conclude_gruppo"):
-                    aggiorna_scenario(sc_live["id"], step_corrente="concluso", locked_by_partecipante_id=None)
-                    st.rerun()
+                    aggiorna_scenario(sc_stato["id"], step_corrente="concluso", locked_by_partecipante_id=None)
+                    st.rerun(scope="app")
             
             st.divider()
             if st.button("🔄 Aggiorna Pagina", key="btn_refresh_gruppo"):
-                st.rerun()
-        else:
-            st.success("🎉 Sessione completamente terminata! Ottimo lavoro.")
-            st.info("Qui sotto puoi scaricare il Report Finale completo con tutti gli scenari discussi oggi.")
-            
-            from lib.database import get_fenomeni, get_voti_aggregati, get_partecipanti as _gp_pdf
-            from lib.pdf_export import st_scarica_pdf_report_finale
-            
-            fenomeni = get_fenomeni(sessione_id)
-            voti = get_voti_aggregati(sessione_id)
-            _par_pdf = _gp_pdf(sessione_id)
-            st_scarica_pdf_report_finale(sessione_aggiornata, get_scenari(sessione_id), fenomeni, voti, partecipanti=_par_pdf)
-            
-            st.divider()
-            if st.button("Torna alla vista principale", type="primary", key="btn_torna_main"):
-                st.rerun()
+                st.rerun(scope="app")
+        
+        _stato_gruppo()
 
     with tab_personale:
         sc_indiv = get_scenario_individuale(sessione_id, partecipante_id)

@@ -225,7 +225,7 @@ def unisci_scenari_gruppo(scenario_gruppo, sessione, scenari_individuali):
     Salva il risultato nel record `scenario_gruppo` e lo pone in stato concluso.
     """
     if not scenari_individuali:
-        aggiorna_scenario(scenario_gruppo["id"], narrativa="Nessun contributo individuale trovato per questo gruppo.", step_corrente="concluso")
+        aggiorna_scenario(scenario_gruppo["id"], narrativa="Nessun contributo individuale trovato per questo gruppo.", step_corrente="intro")
         return
 
     descrizione_quad = descrivi_quadrante(
@@ -287,12 +287,12 @@ Rispondi SOLO con un JSON con la seguente struttura:
                 "punti_comune": dati.get("punti_comune", []),
                 "divergenze": dati.get("divergenze", [])
             },
-            step_corrente="concluso"
+            step_corrente="intro"
         )
     except Exception as e:
         aggiorna_scenario(
             scenario_gruppo["id"],
             narrativa=f"Errore durante la generazione della sintesi: {str(e)}",
-            step_corrente="concluso"
+            step_corrente="intro"
         )
 

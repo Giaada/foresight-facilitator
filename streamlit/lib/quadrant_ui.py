@@ -22,12 +22,12 @@ def draw_quadrant_matrix(quadrante, asse_x_pos, asse_x_neg, asse_y_pos, asse_y_n
     return f"""
     <div style="position: relative; width: 160px; height: 160px; margin: 35px 50px; font-family: ui-sans-serif, system-ui, sans-serif; flex-shrink: 0;">
       <!-- Label Asse Y: top (+) and bottom (-), horizontal -->
-      <div style="position: absolute; top: -28px; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: bold; color: #64748b; text-align: center; max-width: 100px; line-height: 1.2;">{v_asse_y_pos}</div>
-      <div style="position: absolute; bottom: -28px; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: bold; color: #64748b; text-align: center; max-width: 100px; line-height: 1.2;">{v_asse_y_neg}</div>
+      <div style="position: absolute; bottom: calc(100% + 22px); left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: bold; color: #64748b; text-align: center; max-width: 100px; line-height: 1.2; display: flex; align-items: flex-end; justify-content: center;">{v_asse_y_pos}</div>
+      <div style="position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: bold; color: #64748b; text-align: center; max-width: 100px; line-height: 1.2; display: flex; align-items: flex-start; justify-content: center;">{v_asse_y_neg}</div>
       
       <!-- Label Asse X: left (-) and right (+), horizontal -->
-      <div style="position: absolute; top: 50%; left: -8px; transform: translateY(-50%) translateX(-100%); font-size: 10px; font-weight: bold; color: #64748b; text-align: right; max-width: 45px; line-height: 1.2;">{v_asse_x_neg}</div>
-      <div style="position: absolute; top: 50%; right: -8px; transform: translateY(-50%) translateX(100%); font-size: 10px; font-weight: bold; color: #64748b; text-align: left; max-width: 45px; line-height: 1.2;">{v_asse_x_pos}</div>
+      <div style="position: absolute; top: 50%; right: calc(100% + 8px); transform: translateY(-50%); font-size: 10px; font-weight: bold; color: #64748b; text-align: right; max-width: 70px; line-height: 1.2;">{v_asse_x_neg}</div>
+      <div style="position: absolute; top: 50%; left: calc(100% + 24px); transform: translateY(-50%); font-size: 10px; font-weight: bold; color: #64748b; text-align: left; max-width: 70px; line-height: 1.2;">{v_asse_x_pos}</div>
 
       <!-- Sfondo Quadranti -->
       <div style="position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; z-index: 0; outline: 1px solid transparent;">

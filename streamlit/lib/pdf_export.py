@@ -143,11 +143,11 @@ def _build_pdf_quadrant_matrix(sessione, scenari):
     return f"""
     <div style="position: relative; width: 280px; height: 230px; margin: 25px auto 35px auto; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
       <!-- Label Asse Y: top (+) and bottom (-), horizontal -->
-      <div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: bold; color: #64748b; text-align: center; max-width: 140px; line-height: 1.2;">{d2p}</div>
-      <div style="position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: bold; color: #64748b; text-align: center; max-width: 140px; line-height: 1.2;">{d2n}</div>
+      <div style="position: absolute; bottom: calc(100% - 2px); left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: bold; color: #64748b; text-align: center; max-width: 140px; line-height: 1.2; display: flex; align-items: flex-end; justify-content: center;">{d2p}</div>
+      <div style="position: absolute; top: calc(100% - 2px); left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: bold; color: #64748b; text-align: center; max-width: 140px; line-height: 1.2; display: flex; align-items: flex-start; justify-content: center;">{d2n}</div>
       <!-- Label Asse X: left (-) and right (+), horizontal -->
-      <div style="position: absolute; top: 50%; left: -5px; transform: translateY(-50%) translateX(-100%); font-size: 10px; font-weight: bold; color: #64748b; text-align: right; max-width: 60px; line-height: 1.2;">{d1n}</div>
-      <div style="position: absolute; top: 50%; right: -5px; transform: translateY(-50%) translateX(100%); font-size: 10px; font-weight: bold; color: #64748b; text-align: left; max-width: 60px; line-height: 1.2;">{d1p}</div>
+      <div style="position: absolute; top: 50%; right: calc(100% - 2px); transform: translateY(-50%); font-size: 10px; font-weight: bold; color: #64748b; text-align: right; max-width: 80px; line-height: 1.2;">{d1n}</div>
+      <div style="position: absolute; top: 50%; left: calc(100% + 5px); transform: translateY(-50%); font-size: 10px; font-weight: bold; color: #64748b; text-align: left; max-width: 80px; line-height: 1.2;">{d1p}</div>
 
       <!-- Quadranti con nomi scenari -->
       <div style="position: absolute; inset: 18px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 3px;">

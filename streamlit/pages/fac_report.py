@@ -144,8 +144,10 @@ st.subheader("💾 Esporta")
 
 
 from lib.pdf_export import st_scarica_pdf_report_finale
+from lib.database import get_partecipanti as _get_partecipanti_report
+_partecipanti_report = _get_partecipanti_report(sid)
 
-md = st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti)
+md = st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti, partecipanti=_partecipanti_report)
 
 st.download_button(
     label="Scarica File Sorgente (Markdown grezzo)",

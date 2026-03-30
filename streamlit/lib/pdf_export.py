@@ -123,7 +123,52 @@ def st_scarica_pdf_scenario_individuale(scenario_indiv, sessione, nome_partecipa
     
     components.html(pdf_html, height=45)
 
-def st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti):
+def _build_pdf_quadrant_matrix(sessione, scenari):
+    """Genera HTML della matrice 2x2 con assi, frecce e nomi scenari per il PDF."""
+    d1p = sessione.get('driver1_pos') or 'Alto'
+    d1n = sessione.get('driver1_neg') or 'Basso'
+    d2p = sessione.get('driver2_pos') or 'Alto'
+    d2n = sessione.get('driver2_neg') or 'Basso'
+
+    sc_map = {s['quadrante']: s for s in scenari}
+    def _label(q):
+        sc = sc_map.get(q)
+        if sc:
+            t = sc.get('titolo_finale') or sc.get('titolo')
+            if t:
+                # Tronca se troppo lungo
+                return t[:28] + ('…' if len(t) > 28 else '')
+        return q
+
+    return f"""
+    <div style="position: relative; width: 320px; height: 260px; margin: 30px auto 40px auto; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+      <!-- Label Asse Y -->
+      <div style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: bold; color: #64748b; text-transform: capitalize;">{d2p}</div>
+      <div style="position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: bold; color: #64748b; text-transform: capitalize;">{d2n}</div>
+      <!-- Label Asse X -->
+      <div style="position: absolute; top: 50%; left: -10px; transform: translateY(-50%) translateX(-100%) rotate(180deg); writing-mode: vertical-rl; font-size: 11px; font-weight: bold; color: #64748b; text-transform: capitalize;">{d1n}</div>
+      <div style="position: absolute; top: 50%; right: -10px; transform: translateY(-50%) translateX(100%); writing-mode: vertical-rl; font-size: 11px; font-weight: bold; color: #64748b; text-transform: capitalize;">{d1p}</div>
+
+      <!-- Quadranti con nomi scenari -->
+      <div style="position: absolute; inset: 20px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 3px;">
+        <div style="background: #EEF2FF; border-radius: 6px 0 0 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 6px; font-size: 11px; color: #312E81; font-weight: 600; line-height: 1.3;">{_label('-+')}</div>
+        <div style="background: #EEF2FF; border-radius: 0 6px 0 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 6px; font-size: 11px; color: #312E81; font-weight: 600; line-height: 1.3;">{_label('++')}</div>
+        <div style="background: #EEF2FF; border-radius: 0 0 0 6px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 6px; font-size: 11px; color: #312E81; font-weight: 600; line-height: 1.3;">{_label('--')}</div>
+        <div style="background: #EEF2FF; border-radius: 0 0 6px 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 6px; font-size: 11px; color: #312E81; font-weight: 600; line-height: 1.3;">{_label('+-')}</div>
+      </div>
+
+      <!-- Asse Y -->
+      <div style="position: absolute; left: 50%; top: 8px; bottom: 8px; width: 2px; background: #1e293b; transform: translateX(-50%); z-index: 10;"></div>
+      <div style="position: absolute; left: 50%; top: 2px; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 8px solid #1e293b; transform: translateX(-50%); z-index: 10;"></div>
+      <div style="position: absolute; left: 50%; bottom: 2px; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid #1e293b; transform: translateX(-50%); z-index: 10;"></div>
+      <!-- Asse X -->
+      <div style="position: absolute; top: 50%; left: 8px; right: 8px; height: 2px; background: #1e293b; transform: translateY(-50%); z-index: 10;"></div>
+      <div style="position: absolute; top: 50%; right: 2px; width: 0; height: 0; border-top: 6px solid transparent; border-bottom: 6px solid transparent; border-left: 8px solid #1e293b; transform: translateY(-50%); z-index: 10;"></div>
+      <div style="position: absolute; top: 50%; left: 2px; width: 0; height: 0; border-top: 6px solid transparent; border-bottom: 6px solid transparent; border-right: 8px solid #1e293b; transform: translateY(-50%); z-index: 10;"></div>
+    </div>
+    """
+
+def st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti, partecipanti=None):
     sid = sessione["id"]
     fenom_map = {f["id"]: f for f in fenomeni}
 
@@ -136,6 +181,12 @@ def st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti):
     else:
         fenomeni_ordinati = [(i + 1, f["testo"], None) for i, f in enumerate(fenomeni)]
 
+    # Nomi partecipanti
+    nomi_par = ""
+    if partecipanti:
+        nomi = [p.get("nome", "?") for p in partecipanti]
+        nomi_par = ", ".join(nomi)
+
     lines = [
         f"# Report Foresight — Sessione #{sid}",
         f"",
@@ -143,12 +194,28 @@ def st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti):
         f"**Orizzonte temporale:** {sessione['frame_temporale']}",
         f"**Codice sessione:** {sessione.get('codice', '—')}",
         f"",
+    ]
+
+    if nomi_par:
+        lines += [
+            f"## Partecipanti",
+            f"{nomi_par}",
+            f"",
+        ]
+
+    lines += [
         f"## Driver",
         f"- **Driver 1:** {sessione.get('driver1_nome', '—')} ({sessione.get('driver1_pos', '+')} / {sessione.get('driver1_neg', '−')})",
         f"- **Driver 2:** {sessione.get('driver2_nome', '—')} ({sessione.get('driver2_pos', '+')} / {sessione.get('driver2_neg', '−')})",
         f"",
-        f"## Fenomeni prioritizzati",
     ]
+
+    # Matrice grafica 2x2 con nomi scenari
+    if scenari and sessione.get('driver1_nome'):
+        lines.append(_build_pdf_quadrant_matrix(sessione, scenari))
+        lines.append("")
+
+    lines.append(f"## Fenomeni prioritizzati")
     for pos, testo, avg in fenomeni_ordinati:
         avg_str = f" (avg: {avg:.1f})" if avg is not None else ""
         lines.append(f"{pos}. {testo}{avg_str}")

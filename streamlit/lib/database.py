@@ -492,3 +492,22 @@ def get_modello_by_id(modello_id):
 
 def elimina_modello(modello_id):
     exec_query("DELETE FROM modello WHERE id = ?", (modello_id,))
+
+def get_tutti_fenomeni_unici():
+    """Restituisce tutti i fenomeni unici (testo + descrizione) da tutte le sessioni,
+    deduplicati per testo (case-insensitive), ordinati per testo."""
+    rows = exec_query(
+        "SELECT DISTINCT testo, descrizione FROM fenomeno ORDER BY testo ASC",
+        fetch='all'
+    )
+    if not rows:
+        return []
+    # Deduplicazione case-insensitive, tenendo la prima occorrenza
+    seen = set()
+    result = []
+    for r in rows:
+        key = r["testo"].strip().lower()
+        if key not in seen:
+            seen.add(key)
+            result.append({"testo": r["testo"], "descrizione": r.get("descrizione", "") or ""})
+    return result

@@ -8,7 +8,7 @@ from lib.auth import check_facilitatore
 from lib.database import (
     get_sessione_by_id, aggiorna_sessione, get_fenomeni,
     aggiungi_fenomeno, elimina_fenomeno, aggiorna_fenomeno, crea_sessione, lista_sessioni,
-    elimina_sessione, get_modelli, crea_modello, elimina_modello
+    elimina_sessione, get_modelli, crea_modello, elimina_modello, get_tutti_fenomeni_unici
 )
 
 check_facilitatore()
@@ -262,6 +262,21 @@ with col2:
         if nuovo_testo.strip():
             aggiungi_fenomeno(sid, nuovo_testo.strip(), nuova_descr.strip())
         st.rerun()
+
+    # Menu a tendina per aggiungere fenomeni già usati in altre sessioni
+    catalogo = get_tutti_fenomeni_unici()
+    # Filtra quelli già presenti nella sessione corrente
+    testi_presenti = {f["testo"].strip().lower() for f in fenomeni}
+    catalogo_filtrato = [c for c in catalogo if c["testo"].strip().lower() not in testi_presenti]
+    if catalogo_filtrato:
+        st.markdown("**Oppure scegli da fenomeni già usati:**")
+        opzioni_label = [f"{c['testo']}" + (f" — {c['descrizione'][:50]}..." if len(c.get('descrizione','')) > 50 else (f" — {c['descrizione']}" if c.get('descrizione') else "")) for c in catalogo_filtrato]
+        sel = st.selectbox("Seleziona fenomeno esistente", options=range(len(catalogo_filtrato)), format_func=lambda i: opzioni_label[i], index=None, placeholder="Cerca tra i fenomeni...", key="sel_fenomeno_catalogo", label_visibility="collapsed")
+        if sel is not None:
+            if st.button("➕ Aggiungi questo fenomeno", key="btn_add_catalogo", use_container_width=True):
+                scelto = catalogo_filtrato[sel]
+                aggiungi_fenomeno(sid, scelto["testo"], scelto["descrizione"])
+                st.rerun()
 
 st.divider()
 

@@ -17,15 +17,17 @@ def draw_quadrant_matrix(quadrante, asse_x_pos, asse_x_neg, asse_y_pos, asse_y_n
     v_asse_y_pos = asse_y_pos or "Alto"
     v_asse_y_neg = asse_y_neg or "Basso"
 
+    # Labels are all horizontal, wrapping allowed (no white-space: nowrap)
+    # Arrows only on top (Y+) and right (X+) like a Cartesian plane
     return f"""
-    <div style="position: relative; width: 140px; height: 140px; margin: 40px auto; font-family: ui-sans-serif, system-ui, sans-serif; flex-shrink: 0;">
-      <!-- Testi Asse Y -->
-      <div style="position: absolute; top: -30px; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: bold; color: #64748b; white-space: nowrap; text-transform: capitalize;">{v_asse_y_pos}</div>
-      <div style="position: absolute; bottom: -30px; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: bold; color: #64748b; white-space: nowrap; text-transform: capitalize;">{v_asse_y_neg}</div>
+    <div style="position: relative; width: 160px; height: 160px; margin: 35px 50px; font-family: ui-sans-serif, system-ui, sans-serif; flex-shrink: 0;">
+      <!-- Label Asse Y: top (+) and bottom (-), horizontal -->
+      <div style="position: absolute; top: -28px; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: bold; color: #64748b; text-align: center; max-width: 100px; line-height: 1.2;">{v_asse_y_pos}</div>
+      <div style="position: absolute; bottom: -28px; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: bold; color: #64748b; text-align: center; max-width: 100px; line-height: 1.2;">{v_asse_y_neg}</div>
       
-      <!-- Testi Asse X -->
-      <div style="position: absolute; top: 50%; left: -20px; transform: translateY(-50%) translateX(-100%) rotate(180deg); writing-mode: vertical-rl; font-size: 11px; font-weight: bold; color: #64748b; white-space: nowrap; text-transform: capitalize;">{v_asse_x_neg}</div>
-      <div style="position: absolute; top: 50%; right: -20px; transform: translateY(-50%) translateX(100%); writing-mode: vertical-rl; font-size: 11px; font-weight: bold; color: #64748b; white-space: nowrap; text-transform: capitalize;">{v_asse_x_pos}</div>
+      <!-- Label Asse X: left (-) and right (+), horizontal -->
+      <div style="position: absolute; top: 50%; left: -8px; transform: translateY(-50%) translateX(-100%); font-size: 10px; font-weight: bold; color: #64748b; text-align: right; max-width: 45px; line-height: 1.2;">{v_asse_x_neg}</div>
+      <div style="position: absolute; top: 50%; right: -8px; transform: translateY(-50%) translateX(100%); font-size: 10px; font-weight: bold; color: #64748b; text-align: left; max-width: 45px; line-height: 1.2;">{v_asse_x_pos}</div>
 
       <!-- Sfondo Quadranti -->
       <div style="position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; z-index: 0; outline: 1px solid transparent;">
@@ -35,14 +37,12 @@ def draw_quadrant_matrix(quadrante, asse_x_pos, asse_x_neg, asse_y_pos, asse_y_n
          <div style="background-color: {bg_br}; box-shadow: {shadow_br}; display: flex; align-items: center; justify-content: center; font-family: monospace; font-weight: bold; color: {color_br}; font-size: 16px; border-radius: 0 0 6px 0; transition: background-color 0.2s;">+-</div>
       </div>
 
-      <!-- Linea e frecce Asse Y -->
-      <div style="position: absolute; left: 50%; top: -14px; bottom: -14px; width: 3px; background-color: #1e293b; transform: translateX(-50%); z-index: 10;"></div>
+      <!-- Asse Y: linea verticale + freccia SOLO in alto -->
+      <div style="position: absolute; left: 50%; top: -14px; bottom: -4px; width: 3px; background-color: #1e293b; transform: translateX(-50%); z-index: 10;"></div>
       <div style="position: absolute; left: 50%; top: -18px; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-bottom: 10px solid #1e293b; transform: translateX(-50%); z-index: 10;"></div>
-      <div style="position: absolute; left: 50%; bottom: -18px; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 10px solid #1e293b; transform: translateX(-50%); z-index: 10;"></div>
 
-      <!-- Linea e frecce Asse X -->
-      <div style="position: absolute; top: 50%; left: -14px; right: -14px; height: 3px; background-color: #1e293b; transform: translateY(-50%); z-index: 10;"></div>
+      <!-- Asse X: linea orizzontale + freccia SOLO a destra -->
+      <div style="position: absolute; top: 50%; left: -4px; right: -14px; height: 3px; background-color: #1e293b; transform: translateY(-50%); z-index: 10;"></div>
       <div style="position: absolute; top: 50%; right: -18px; width: 0; height: 0; border-top: 7px solid transparent; border-bottom: 7px solid transparent; border-left: 10px solid #1e293b; transform: translateY(-50%); z-index: 10;"></div>
-      <div style="position: absolute; top: 50%; left: -18px; width: 0; height: 0; border-top: 7px solid transparent; border-bottom: 7px solid transparent; border-right: 10px solid #1e293b; transform: translateY(-50%); z-index: 10;"></div>
     </div>
     """

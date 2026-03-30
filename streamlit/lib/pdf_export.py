@@ -142,12 +142,12 @@ def _build_pdf_quadrant_matrix(sessione, scenari):
 
     return f"""
     <div style="position: relative; width: 280px; height: 230px; margin: 25px auto 35px auto; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-      <!-- Label Asse Y -->
-      <div style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: bold; color: #64748b; text-transform: capitalize;">{d2p}</div>
-      <div style="position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: bold; color: #64748b; text-transform: capitalize;">{d2n}</div>
-      <!-- Label Asse X -->
-      <div style="position: absolute; top: 50%; left: -5px; transform: translateY(-50%) translateX(-100%) rotate(180deg); writing-mode: vertical-rl; font-size: 10px; font-weight: bold; color: #64748b; text-transform: capitalize;">{d1n}</div>
-      <div style="position: absolute; top: 50%; right: -5px; transform: translateY(-50%) translateX(100%); writing-mode: vertical-rl; font-size: 10px; font-weight: bold; color: #64748b; text-transform: capitalize;">{d1p}</div>
+      <!-- Label Asse Y: top (+) and bottom (-), horizontal -->
+      <div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: bold; color: #64748b; text-align: center; max-width: 140px; line-height: 1.2;">{d2p}</div>
+      <div style="position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: bold; color: #64748b; text-align: center; max-width: 140px; line-height: 1.2;">{d2n}</div>
+      <!-- Label Asse X: left (-) and right (+), horizontal -->
+      <div style="position: absolute; top: 50%; left: -5px; transform: translateY(-50%) translateX(-100%); font-size: 10px; font-weight: bold; color: #64748b; text-align: right; max-width: 60px; line-height: 1.2;">{d1n}</div>
+      <div style="position: absolute; top: 50%; right: -5px; transform: translateY(-50%) translateX(100%); font-size: 10px; font-weight: bold; color: #64748b; text-align: left; max-width: 60px; line-height: 1.2;">{d1p}</div>
 
       <!-- Quadranti con nomi scenari -->
       <div style="position: absolute; inset: 18px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 3px;">
@@ -157,14 +157,12 @@ def _build_pdf_quadrant_matrix(sessione, scenari):
         <div style="background: #EEF2FF; border-radius: 0 0 6px 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 5px; font-size: 10px; color: #312E81; font-weight: 600; line-height: 1.3;">{_label('+-')}</div>
       </div>
 
-      <!-- Asse Y -->
-      <div style="position: absolute; left: 50%; top: 8px; bottom: 8px; width: 2px; background: #1e293b; transform: translateX(-50%); z-index: 10;"></div>
+      <!-- Asse Y: linea + freccia SOLO in alto -->
+      <div style="position: absolute; left: 50%; top: 8px; bottom: 4px; width: 2px; background: #1e293b; transform: translateX(-50%); z-index: 10;"></div>
       <div style="position: absolute; left: 50%; top: 2px; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 7px solid #1e293b; transform: translateX(-50%); z-index: 10;"></div>
-      <div style="position: absolute; left: 50%; bottom: 2px; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 7px solid #1e293b; transform: translateX(-50%); z-index: 10;"></div>
-      <!-- Asse X -->
-      <div style="position: absolute; top: 50%; left: 8px; right: 8px; height: 2px; background: #1e293b; transform: translateY(-50%); z-index: 10;"></div>
+      <!-- Asse X: linea + freccia SOLO a destra -->
+      <div style="position: absolute; top: 50%; left: 4px; right: 8px; height: 2px; background: #1e293b; transform: translateY(-50%); z-index: 10;"></div>
       <div style="position: absolute; top: 50%; right: 2px; width: 0; height: 0; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-left: 7px solid #1e293b; transform: translateY(-50%); z-index: 10;"></div>
-      <div style="position: absolute; top: 50%; left: 2px; width: 0; height: 0; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-right: 7px solid #1e293b; transform: translateY(-50%); z-index: 10;"></div>
     </div>
     """
 

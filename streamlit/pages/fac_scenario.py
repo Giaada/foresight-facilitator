@@ -234,9 +234,19 @@ elif stato in ("scenario_planning_gruppo", "concluso"):
 
     st.divider()
     if stato != "concluso":
-        if st.button("✅ Chiudi definitivamente sessione e vai al Report", type="primary", use_container_width=True):
-            aggiorna_sessione(sid, stato="concluso")
-            st.switch_page("pages/fac_report.py")
+        col_chiudi, col_report = st.columns([3, 1])
+        with col_chiudi:
+            if st.button("✅ Chiudi definitivamente sessione e vai al Report", type="primary", use_container_width=True, key="btn_chiudi_sessione"):
+                aggiorna_sessione(sid, stato="concluso")
+                st.session_state["_vai_al_report"] = True
+                st.rerun()
+        with col_report:
+            if st.button("📄 Vai al Report", use_container_width=True, key="btn_vai_report_anteprima"):
+                st.switch_page("pages/fac_report.py")
     else:
-        if st.button("Vai al Report", type="primary", use_container_width=True):
+        if st.button("📄 Vai al Report Finale", type="primary", use_container_width=True, key="btn_vai_report_concluso"):
             st.switch_page("pages/fac_report.py")
+
+# Handle deferred navigation (after state update completes)
+if st.session_state.pop("_vai_al_report", False):
+    st.switch_page("pages/fac_report.py")

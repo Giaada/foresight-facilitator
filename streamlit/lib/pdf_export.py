@@ -53,14 +53,14 @@ def st_scarica_pdf_scenario_individuale(scenario_indiv, sessione, nome_partecipa
     <meta charset="utf-8">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-      * {{ box-sizing: border-box; word-wrap: break-word; overflow-wrap: break-word; max-width: 100%; }}
+      * {{ box-sizing: border-box; word-wrap: break-word; overflow-wrap: break-word; }}
       body {{ font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 0; color: #333; margin: 0; }}
-      #{unique_id} {{ padding: 10px 20px; }}
-      #{unique_id} h1 {{ color: #4F46E5; border-bottom: 2px solid #e0e7ff; padding-bottom: 10px; margin-bottom: 20px; }}
+      #{unique_id} {{ padding: 20px 30px; max-width: 700px; margin: 0 auto; }}
+      #{unique_id} h1 {{ color: #4F46E5; border-bottom: 2px solid #e0e7ff; padding-bottom: 10px; margin-bottom: 20px; font-size: 22px; }}
       #{unique_id} h3 {{ color: #4338CA; margin-top: 20px; }}
-      #{unique_id} p, #{unique_id} li {{ line-height: 1.6; font-size: 14px; position: relative; z-index: 1; }}
+      #{unique_id} p, #{unique_id} li {{ line-height: 1.6; font-size: 13px; position: relative; z-index: 1; }}
       .box {{ padding: 15px; margin-top: 15px; margin-bottom: 15px; border-radius: 8px; border-left: 5px solid; }}
-      .box h4 {{ margin-top: 0 !important; margin-bottom: 10px; font-size: 16px; padding-bottom: 5px; }}
+      .box h4 {{ margin-top: 0 !important; margin-bottom: 10px; font-size: 15px; padding-bottom: 5px; }}
       .box ul {{ margin-bottom: 0; padding-left: 20px; }}
       .box.minacce {{ background-color: #FEF2F2; border-left-color: #EF4444; }}
       .box.minacce h4 {{ color: #991B1B !important; }}
@@ -71,12 +71,12 @@ def st_scarica_pdf_scenario_individuale(scenario_indiv, sessione, nome_partecipa
       .box.divergenze {{ background-color: #FEFCE8; border-left-color: #EAB308; }}
       .box.divergenze h4 {{ color: #854D0E !important; }}
       .scenario-title-box {{ background-color: #E0F2FE; border: 2px solid #0284C7; border-radius: 8px; padding: 15px 20px; margin-top: 20px; margin-bottom: 25px; text-align: center; page-break-after: avoid; }}
-      .scenario-label {{ display: block; font-size: 14px; font-weight: 700; color: #0369A1; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }}
-      .scenario-name {{ color: #0C4A6E !important; margin: 0 !important; padding: 0 !important; border: none !important; font-size: 24px; }}
-      .scenario-quadrant {{ display: inline-block; margin-top: 10px; background-color: #BAE6FD; color: #075985; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 600; }}
+      .scenario-label {{ display: block; font-size: 13px; font-weight: 700; color: #0369A1; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }}
+      .scenario-name {{ color: #0C4A6E !important; margin: 0 !important; padding: 0 !important; border: none !important; font-size: 22px; }}
+      .scenario-quadrant {{ display: inline-block; margin-top: 10px; background-color: #BAE6FD; color: #075985; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }}
       .toc {{ list-style: none; padding-left: 0; margin-bottom: 30px; page-break-after: always; }}
       .toc li {{ margin-bottom: 10px; padding: 12px; background-color: #F8FAFC; border-left: 4px solid #94A3B8; border-radius: 4px; }}
-      .toc a {{ text-decoration: none; color: #334155; font-size: 16px; display: block; }}
+      .toc a {{ text-decoration: none; color: #334155; font-size: 15px; display: block; }}
       .toc a:hover {{ color: #2563EB; }}
       .btn {{ 
         background-color: #10B981; color: white; padding: 10px 20px; 
@@ -89,7 +89,7 @@ def st_scarica_pdf_scenario_individuale(scenario_indiv, sessione, nome_partecipa
     </style>
     </head>
     <body>
-    <div style="position: absolute; left: 0; top: 0; width: 780px; background-color: white; opacity: 0.01; z-index: -10; pointer-events: none;">
+    <div style="position: absolute; left: 0; top: 0; width: 700px; background-color: white; opacity: 0.01; z-index: -10; pointer-events: none;">
       <div id="{unique_id}">
         {html_content}
       </div>
@@ -103,10 +103,10 @@ def st_scarica_pdf_scenario_individuale(scenario_indiv, sessione, nome_partecipa
       var element = document.getElementById('{unique_id}');
       
       var opt = {{
-        margin: 15,
+        margin: [15, 20, 15, 20],
         filename: 'Scenario_{nome_partecipante}.pdf',
         image: {{ type: 'jpeg', quality: 0.98 }},
-        html2canvas: {{ scale: 2, useCORS: true, windowWidth: 800, x: 0, y: 0, scrollX: 0, scrollY: 0 }},
+        html2canvas: {{ scale: 2, useCORS: true, windowWidth: 700, x: 0, y: 0, scrollX: 0, scrollY: 0 }},
         jsPDF: {{ unit: 'mm', format: 'a4', orientation: 'portrait' }}
       }};
       
@@ -141,30 +141,30 @@ def _build_pdf_quadrant_matrix(sessione, scenari):
         return q
 
     return f"""
-    <div style="position: relative; width: 320px; height: 260px; margin: 30px auto 40px auto; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+    <div style="position: relative; width: 280px; height: 230px; margin: 25px auto 35px auto; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
       <!-- Label Asse Y -->
-      <div style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: bold; color: #64748b; text-transform: capitalize;">{d2p}</div>
-      <div style="position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: bold; color: #64748b; text-transform: capitalize;">{d2n}</div>
+      <div style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: bold; color: #64748b; text-transform: capitalize;">{d2p}</div>
+      <div style="position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: bold; color: #64748b; text-transform: capitalize;">{d2n}</div>
       <!-- Label Asse X -->
-      <div style="position: absolute; top: 50%; left: -10px; transform: translateY(-50%) translateX(-100%) rotate(180deg); writing-mode: vertical-rl; font-size: 11px; font-weight: bold; color: #64748b; text-transform: capitalize;">{d1n}</div>
-      <div style="position: absolute; top: 50%; right: -10px; transform: translateY(-50%) translateX(100%); writing-mode: vertical-rl; font-size: 11px; font-weight: bold; color: #64748b; text-transform: capitalize;">{d1p}</div>
+      <div style="position: absolute; top: 50%; left: -5px; transform: translateY(-50%) translateX(-100%) rotate(180deg); writing-mode: vertical-rl; font-size: 10px; font-weight: bold; color: #64748b; text-transform: capitalize;">{d1n}</div>
+      <div style="position: absolute; top: 50%; right: -5px; transform: translateY(-50%) translateX(100%); writing-mode: vertical-rl; font-size: 10px; font-weight: bold; color: #64748b; text-transform: capitalize;">{d1p}</div>
 
       <!-- Quadranti con nomi scenari -->
-      <div style="position: absolute; inset: 20px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 3px;">
-        <div style="background: #EEF2FF; border-radius: 6px 0 0 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 6px; font-size: 11px; color: #312E81; font-weight: 600; line-height: 1.3;">{_label('-+')}</div>
-        <div style="background: #EEF2FF; border-radius: 0 6px 0 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 6px; font-size: 11px; color: #312E81; font-weight: 600; line-height: 1.3;">{_label('++')}</div>
-        <div style="background: #EEF2FF; border-radius: 0 0 0 6px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 6px; font-size: 11px; color: #312E81; font-weight: 600; line-height: 1.3;">{_label('--')}</div>
-        <div style="background: #EEF2FF; border-radius: 0 0 6px 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 6px; font-size: 11px; color: #312E81; font-weight: 600; line-height: 1.3;">{_label('+-')}</div>
+      <div style="position: absolute; inset: 18px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 3px;">
+        <div style="background: #EEF2FF; border-radius: 6px 0 0 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 5px; font-size: 10px; color: #312E81; font-weight: 600; line-height: 1.3;">{_label('-+')}</div>
+        <div style="background: #EEF2FF; border-radius: 0 6px 0 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 5px; font-size: 10px; color: #312E81; font-weight: 600; line-height: 1.3;">{_label('++')}</div>
+        <div style="background: #EEF2FF; border-radius: 0 0 0 6px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 5px; font-size: 10px; color: #312E81; font-weight: 600; line-height: 1.3;">{_label('--')}</div>
+        <div style="background: #EEF2FF; border-radius: 0 0 6px 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 5px; font-size: 10px; color: #312E81; font-weight: 600; line-height: 1.3;">{_label('+-')}</div>
       </div>
 
       <!-- Asse Y -->
       <div style="position: absolute; left: 50%; top: 8px; bottom: 8px; width: 2px; background: #1e293b; transform: translateX(-50%); z-index: 10;"></div>
-      <div style="position: absolute; left: 50%; top: 2px; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 8px solid #1e293b; transform: translateX(-50%); z-index: 10;"></div>
-      <div style="position: absolute; left: 50%; bottom: 2px; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid #1e293b; transform: translateX(-50%); z-index: 10;"></div>
+      <div style="position: absolute; left: 50%; top: 2px; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 7px solid #1e293b; transform: translateX(-50%); z-index: 10;"></div>
+      <div style="position: absolute; left: 50%; bottom: 2px; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 7px solid #1e293b; transform: translateX(-50%); z-index: 10;"></div>
       <!-- Asse X -->
       <div style="position: absolute; top: 50%; left: 8px; right: 8px; height: 2px; background: #1e293b; transform: translateY(-50%); z-index: 10;"></div>
-      <div style="position: absolute; top: 50%; right: 2px; width: 0; height: 0; border-top: 6px solid transparent; border-bottom: 6px solid transparent; border-left: 8px solid #1e293b; transform: translateY(-50%); z-index: 10;"></div>
-      <div style="position: absolute; top: 50%; left: 2px; width: 0; height: 0; border-top: 6px solid transparent; border-bottom: 6px solid transparent; border-right: 8px solid #1e293b; transform: translateY(-50%); z-index: 10;"></div>
+      <div style="position: absolute; top: 50%; right: 2px; width: 0; height: 0; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-left: 7px solid #1e293b; transform: translateY(-50%); z-index: 10;"></div>
+      <div style="position: absolute; top: 50%; left: 2px; width: 0; height: 0; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-right: 7px solid #1e293b; transform: translateY(-50%); z-index: 10;"></div>
     </div>
     """
 
@@ -320,19 +320,19 @@ def st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti, partecipanti
     <meta charset="utf-8">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-      * {{ box-sizing: border-box; word-wrap: break-word; overflow-wrap: break-word; max-width: 100%; }}
+      * {{ box-sizing: border-box; word-wrap: break-word; overflow-wrap: break-word; }}
       body {{ font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 0; color: #333; margin: 0; }}
-      #pdf-report-body {{ padding: 10px 20px; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }}
-      #pdf-report-body h1 {{ color: #4F46E5; border-bottom: 2px solid #e0e7ff; padding-bottom: 15px; margin-bottom: 25px; page-break-after: avoid; }}
-      #pdf-report-body h2 {{ color: #312E81; margin-top: 35px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; page-break-after: avoid; }}
-      #pdf-report-body h3 {{ color: #4338CA; margin-top: 25px; margin-bottom: 10px; page-break-after: avoid; }}
-      #pdf-report-body h4 {{ color: #111827; margin-top: 20px; page-break-after: avoid; }}
-      #pdf-report-body p, #pdf-report-body li {{ line-height: 1.7; font-size: 15px; }}
+      #pdf-report-body {{ padding: 20px 30px; max-width: 700px; margin: 0 auto; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }}
+      #pdf-report-body h1 {{ color: #4F46E5; border-bottom: 2px solid #e0e7ff; padding-bottom: 15px; margin-bottom: 25px; page-break-after: avoid; font-size: 22px; }}
+      #pdf-report-body h2 {{ color: #312E81; margin-top: 30px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; page-break-after: avoid; font-size: 18px; }}
+      #pdf-report-body h3 {{ color: #4338CA; margin-top: 22px; margin-bottom: 10px; page-break-after: avoid; font-size: 16px; }}
+      #pdf-report-body h4 {{ color: #111827; margin-top: 18px; page-break-after: avoid; font-size: 14px; }}
+      #pdf-report-body p, #pdf-report-body li {{ line-height: 1.7; font-size: 13px; }}
       #pdf-report-body strong {{ color: #111827; }}
       #pdf-report-body blockquote {{ border-left: 4px solid #4F46E5; padding-left: 15px; margin-left: 0; padding-top: 5px; padding-bottom: 5px; color: #4B5563; font-style: italic; background-color: #F3F4F6; border-radius: 4px; }}
       .page-break {{ page-break-before: always; }}
-      .box {{ padding: 15px; margin-top: 15px; margin-bottom: 15px; border-radius: 8px; border-left: 5px solid; page-break-inside: avoid; }}
-      .box h4 {{ margin-top: 0 !important; margin-bottom: 10px; font-size: 16px; padding-bottom: 5px; }}
+      .box {{ padding: 12px; margin-top: 12px; margin-bottom: 12px; border-radius: 8px; border-left: 5px solid; page-break-inside: avoid; }}
+      .box h4 {{ margin-top: 0 !important; margin-bottom: 8px; font-size: 14px; padding-bottom: 5px; }}
       .box ul {{ margin-bottom: 0; padding-left: 20px; }}
       .box.minacce {{ background-color: #FEF2F2; border-left-color: #EF4444; }}
       .box.minacce h4 {{ color: #991B1B !important; }}
@@ -343,12 +343,12 @@ def st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti, partecipanti
       .box.divergenze {{ background-color: #FEFCE8; border-left-color: #EAB308; }}
       .box.divergenze h4 {{ color: #854D0E !important; }}
       .scenario-title-box {{ background-color: #E0F2FE; border: 2px solid #0284C7; border-radius: 8px; padding: 15px 20px; margin-top: 20px; margin-bottom: 25px; text-align: center; page-break-after: avoid; }}
-      .scenario-label {{ display: block; font-size: 14px; font-weight: 700; color: #0369A1; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }}
-      .scenario-name {{ color: #0C4A6E !important; margin: 0 !important; padding: 0 !important; border: none !important; font-size: 24px; }}
-      .scenario-quadrant {{ display: inline-block; margin-top: 10px; background-color: #BAE6FD; color: #075985; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 600; }}
+      .scenario-label {{ display: block; font-size: 13px; font-weight: 700; color: #0369A1; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }}
+      .scenario-name {{ color: #0C4A6E !important; margin: 0 !important; padding: 0 !important; border: none !important; font-size: 22px; }}
+      .scenario-quadrant {{ display: inline-block; margin-top: 10px; background-color: #BAE6FD; color: #075985; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }}
       .toc {{ list-style: none; padding-left: 0; margin-bottom: 30px; page-break-after: always; }}
-      .toc li {{ margin-bottom: 10px; padding: 12px; background-color: #F8FAFC; border-left: 4px solid #94A3B8; border-radius: 4px; }}
-      .toc a {{ text-decoration: none; color: #334155; font-size: 16px; display: block; }}
+      .toc li {{ margin-bottom: 10px; padding: 10px; background-color: #F8FAFC; border-left: 4px solid #94A3B8; border-radius: 4px; }}
+      .toc a {{ text-decoration: none; color: #334155; font-size: 14px; display: block; }}
       .toc a:hover {{ color: #2563EB; }}
       .btn {{ 
         background-color: #4F46E5; color: white; padding: 12px 24px; 
@@ -362,7 +362,7 @@ def st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti, partecipanti
     </head>
     <body>
 
-    <div style="position: absolute; left: 0; top: 0; width: 780px; background-color: white; opacity: 0.01; z-index: -10; pointer-events: none;">
+    <div style="position: absolute; left: 0; top: 0; width: 700px; background-color: white; opacity: 0.01; z-index: -10; pointer-events: none;">
       <div id="pdf-report-body">
         {html_content}
       </div>
@@ -377,10 +377,10 @@ def st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti, partecipanti
       var element = document.getElementById('pdf-report-body');
       
       var opt = {{
-        margin: [10, 10, 10, 10],
+        margin: [15, 20, 15, 20],
         filename: 'Report_Scenario_Planning_#{sid}.pdf',
         image: {{ type: 'jpeg', quality: 0.98 }},
-        html2canvas: {{ scale: 2, useCORS: true, windowWidth: 780, windowHeight: window.innerHeight, x: 0, y: 0, scrollX: 0, scrollY: 0 }},
+        html2canvas: {{ scale: 2, useCORS: true, windowWidth: 700, windowHeight: window.innerHeight, x: 0, y: 0, scrollX: 0, scrollY: 0 }},
         jsPDF: {{ unit: 'mm', format: 'a4', orientation: 'portrait' }},
         pagebreak: {{ mode: ['avoid-all', 'css', 'legacy'] }},
         enableLinks: true

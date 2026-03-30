@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import sys
 from pathlib import Path
 
@@ -106,8 +107,13 @@ asse_y_neg = sessione.get("driver2_neg", "Basso")
 q_x = asse_x_pos if sc["quadrante"][0] == "+" else asse_x_neg
 q_y = asse_y_pos if sc["quadrante"][1] == "+" else asse_y_neg
 
+matrix_html = draw_quadrant_matrix(sc['quadrante'], asse_x_pos, asse_x_neg, asse_y_pos, asse_y_neg)
 css_matrix = f"""
-<div style="background-color: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1.25rem; display: flex; flex-direction: row; gap: 2rem; align-items: center; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); margin-bottom: 20px;">
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin: 0; padding: 0; background: transparent;">
+<div style="background-color: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1.25rem; display: flex; flex-direction: row; gap: 2rem; align-items: center; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);">
   <div style="flex: 1; font-size: 0.875rem; color: #374151;">
     <h3 style="font-size: 1rem; font-weight: bold; color: #312e81; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
       Bussola Scenario: Quadrante <span style="color: #4f46e5; background-color: #eef2ff; border: 1px solid #e0e7ff; padding: 0.125rem 0.5rem; border-radius: 0.25rem;">{sc['quadrante']}</span>
@@ -115,11 +121,13 @@ css_matrix = f"""
     <p style="line-height: 1.6; margin:0;">Il vostro gruppo sta attivamente esplorando l'incrocio tra <strong>{q_x}</strong> (sull'asse <em>{d1}</em>) e <strong>{q_y}</strong> (sull'asse <em>{d2}</em>).</p>
   </div>
   <div style="display: flex; flex-direction: column; align-items: center; flex-shrink: 0; padding-right: 20px;">
-    {draw_quadrant_matrix(sc['quadrante'], asse_x_pos, asse_x_neg, asse_y_pos, asse_y_neg)}
+    {matrix_html}
   </div>
 </div>
+</body>
+</html>
 """
-st.markdown(css_matrix, unsafe_allow_html=True)
+components.html(css_matrix, height=260)
 
 
 if is_group_phase:
@@ -233,19 +241,32 @@ if is_group_phase:
         _sezione_definitiva()
         
         st.divider()
+        
+        # Re-fetch fresh session state to detect facilitator closing
+        sessione_aggiornata = get_sessione_by_id(sessione_id)
+        stato_aggiornato = sessione_aggiornata.get("stato") if sessione_aggiornata else stato
+        
         sc_live = get_scenario(sc["id"])
-        if stato != "concluso":
+        if stato_aggiornato != "concluso":
             if sc_live.get("step_corrente") == "concluso":
                 st.success("🏁 Avete dichiarato concluso il lavoro di gruppo! Il Facilitatore è stato avvisato.")
-                st.info("Attendete che la sessione venga spostata alla Dashboard Generale Finale.")
+                st.info("Attendete che il facilitatore chiuda ufficialmente la sessione per accedere al Report Finale.")
+                
+                # Auto-poll per rilevare la chiusura della sessione da parte del facilitatore
+                @st.fragment(run_every=5)
+                def _attendi_chiusura_sessione():
+                    s = get_sessione_by_id(sessione_id)
+                    if s and s.get("stato") == "concluso":
+                        st.rerun(scope="app")
+                _attendi_chiusura_sessione()
             else:
                 st.warning("Assicuratevi che la Versione Definitiva sia pronta prima di dichiarare concluso il lavoro.")
-                if st.button("✅ Dichiara Lavoro di Gruppo Concluso", type="primary", use_container_width=True):
+                if st.button("✅ Dichiara Lavoro di Gruppo Concluso", type="primary", use_container_width=True, key="btn_conclude_gruppo"):
                     aggiorna_scenario(sc_live["id"], step_corrente="concluso", locked_by_partecipante_id=None)
                     st.rerun()
             
             st.divider()
-            if st.button("🔄 Aggiorna Pagina"):
+            if st.button("🔄 Aggiorna Pagina", key="btn_refresh_gruppo"):
                 st.rerun()
         else:
             st.success("🎉 Sessione completamente terminata! Ottimo lavoro.")
@@ -257,10 +278,10 @@ if is_group_phase:
             fenomeni = get_fenomeni(sessione_id)
             voti = get_voti_aggregati(sessione_id)
             _par_pdf = _gp_pdf(sessione_id)
-            st_scarica_pdf_report_finale(sessione, get_scenari(sessione_id), fenomeni, voti, partecipanti=_par_pdf)
+            st_scarica_pdf_report_finale(sessione_aggiornata, get_scenari(sessione_id), fenomeni, voti, partecipanti=_par_pdf)
             
             st.divider()
-            if st.button("Torna alla vista principale", type="primary"):
+            if st.button("Torna alla vista principale", type="primary", key="btn_torna_main"):
                 st.rerun()
 
     with tab_personale:
@@ -355,9 +376,11 @@ else:
     
     # ── Pannello scenario in costruzione ─────────────────────
     with col_panel:
-        @st.fragment(run_every=5)
+        scenario_id_for_panel = sc["id"]
+        
+        @st.fragment(run_every=3)
         def _pannello_scenario():
-            sc_live = get_scenario(sc["id"])
+            sc_live = get_scenario(scenario_id_for_panel)
             if not sc_live:
                 return
     
@@ -373,7 +396,8 @@ else:
             step_label = STEP_LABEL.get(sc_live["step_corrente"], sc_live["step_corrente"])
             st.caption(f"Step Individuale: {step_label}")
     
-            with st.expander("📝 Scenario in costruzione", expanded=True):
+            with st.container(border=True):
+                st.markdown("##### 📝 Scenario in costruzione")
                 if sc_live.get("titolo"):
                     st.markdown(f"### {sc_live['titolo']}")
                 else:
@@ -408,6 +432,9 @@ else:
                     sc_live.get("opportunita"),
                 ]):
                     st.info("Il tuo piano personale si costruirà dialogando con l'agente.")
+            
+            if st.button("🔄 Aggiorna Piano", key="btn_refresh_panel", use_container_width=True):
+                st.rerun(scope="app")
     
         _pannello_scenario()
 

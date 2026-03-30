@@ -88,7 +88,16 @@ if not st.session_state.get("sessione_id"):
             if submitted_mod and mod_scelto_id:
                 m_data = mod_opzioni[mod_scelto_id]
                 f_raw = m_data.get("fenomeni_raw", "")
-                f_list = [{"testo": f.strip()} for f in f_raw.splitlines() if f.strip()]
+                f_list = []
+                for f_line in f_raw.splitlines():
+                    f_line = f_line.strip()
+                    if not f_line:
+                        continue
+                    if "|" in f_line:
+                        parts = f_line.split("|", 1)
+                        f_list.append({"testo": parts[0].strip(), "descrizione": parts[1].strip()})
+                    else:
+                        f_list.append({"testo": f_line})
                 sid = crea_sessione(m_data["domanda_ricerca"], m_data["frame_temporale"], m_data["key_points"], f_list)
                 st.session_state["sessione_id"] = sid
                 st.success("Sessione avviata dal modello con successo!")
@@ -105,7 +114,13 @@ if not st.session_state.get("sessione_id"):
             st.markdown("**Key Points** (uno per riga)")
             kp_mod = st.text_area("Key points", height=60, label_visibility="collapsed")
             st.markdown("**Fenomeni / Trend iniziali** (uno per riga)")
-            fen_mod = st.text_area("Fenomeni", height=80, label_visibility="collapsed")
+            st.caption("Per aggiungere una descrizione, usa il formato: `Fenomeno | Descrizione`")
+            fen_mod = st.text_area(
+                "Fenomeni",
+                height=80,
+                label_visibility="collapsed",
+                placeholder="Es. Intelligenza Artificiale generativa | Impatto dell'IA su lavoro e società\nInvecchiamento della popolazione | Trend demografico globale",
+            )
             sub_save = st.form_submit_button("Salva Modello", type="secondary")
             
         if sub_save:

@@ -314,12 +314,26 @@ def aggiorna_priorita_fenomeni(sessione_id, ordine_ids):
 # ── Partecipanti ──────────────────────────────────────────
 
 def registra_partecipante(sessione_id, nome):
+    # Se esiste già un partecipante con lo stesso nome nella sessione, ricollegalo
+    esistente = exec_query(
+        "SELECT * FROM partecipante WHERE sessione_id = ? AND nome = ?",
+        (sessione_id, nome),
+        fetch='one'
+    )
+    if esistente:
+        return {"id": esistente["id"], "nome": esistente["nome"], "sessione_id": sessione_id}
     pid = exec_query(
         "INSERT INTO partecipante (sessione_id, nome) VALUES (?, ?)",
         (sessione_id, nome),
         return_id=True
     )
     return {"id": pid, "nome": nome, "sessione_id": sessione_id}
+
+def get_partecipante_by_id(pid):
+    row = exec_query("SELECT * FROM partecipante WHERE id = ?", (pid,), fetch='one')
+    if row:
+        return {"id": row["id"], "nome": row["nome"], "sessione_id": row["sessione_id"]}
+    return None
 
 def get_partecipanti(sessione_id):
     return exec_query("SELECT * FROM partecipante WHERE sessione_id = ? ORDER BY id ASC", (sessione_id,), fetch='all')

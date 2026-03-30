@@ -4,10 +4,20 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from lib.database import init_db, get_sessione_by_id, get_sessione_by_codice, registra_partecipante
+from lib.database import init_db, get_sessione_by_id, get_sessione_by_codice, registra_partecipante, get_partecipante_by_id
 
 st.set_page_config(page_title="Foresight Facilitator", page_icon="🧭", layout="wide")
 init_db()
+
+# ── Auto-restore sessione partecipante via query params ───
+if not st.session_state.get("ruolo"):
+    qp = st.query_params
+    pid = qp.get("pid")
+    if pid:
+        par = get_partecipante_by_id(pid)
+        if par:
+            st.session_state["ruolo"] = "partecipante"
+            st.session_state["partecipante"] = par
 
 ruolo = st.session_state.get("ruolo")  # None | "facilitatore" | "partecipante"
 
@@ -128,6 +138,7 @@ elif ruolo == "partecipante":
             st.divider()
 
         if st.button("Esci"):
+            st.query_params.clear()
             st.session_state.clear()
             st.rerun()
 
@@ -197,6 +208,7 @@ else:
                             partecipante = registra_partecipante(sessione["id"], nome.strip())
                             st.session_state["ruolo"] = "partecipante"
                             st.session_state["partecipante"] = partecipante
+                            st.query_params["pid"] = str(partecipante["id"])
                             st.rerun()
 
     pg = st.navigation({"": [st.Page(_home, title="Home", default=True)]})

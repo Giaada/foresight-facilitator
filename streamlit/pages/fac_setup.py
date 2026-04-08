@@ -107,29 +107,68 @@ if not st.session_state.get("sessione_id"):
     with tab3:
         st.subheader("💾 Crea Nuovo Modello")
         st.caption("Configura un setup riutilizzabile su cui basare infinite sessioni future.")
-        with st.form("nuovo_modello", clear_on_submit=True):
-            titolo_mod = st.text_input("Nome Modello *", placeholder="Es. Workshop Energia 2050 - Base")
-            dom_mod = st.text_area("Domanda di ricerca *", height=80)
-            frame_mod = st.text_input("Orizzonte temporale *")
-            st.markdown("**Key Points** (uno per riga)")
-            kp_mod = st.text_area("Key points", height=60, label_visibility="collapsed")
-            st.markdown("**Fenomeni / Trend iniziali** (uno per riga)")
-            st.caption("Per aggiungere una descrizione, usa il formato: `Fenomeno | Descrizione`")
-            fen_mod = st.text_area(
-                "Fenomeni",
-                height=80,
-                label_visibility="collapsed",
-                placeholder="Es. Intelligenza Artificiale generativa | Impatto dell'IA su lavoro e società\nInvecchiamento della popolazione | Trend demografico globale",
-            )
-            sub_save = st.form_submit_button("Salva Modello", type="secondary")
-            
-        if sub_save:
-            if not titolo_mod.strip() or not dom_mod.strip() or not frame_mod.strip():
+
+        if "nmod_n_fenomeni" not in st.session_state:
+            st.session_state.nmod_n_fenomeni = 1
+
+        st.text_input("Nome Modello *", placeholder="Es. Workshop Energia 2050 - Base", key="nmod_titolo")
+        st.text_area("Domanda di ricerca *", height=80, key="nmod_domanda")
+        st.text_input("Orizzonte temporale *", key="nmod_frame")
+        st.markdown("**Key Points** (uno per riga)")
+        st.text_area("Key points", height=60, label_visibility="collapsed",
+                     placeholder="Tecnologia\nLavoro\nGovernance\nAmbiente", key="nmod_kp")
+
+        st.markdown("**Fenomeni / Trend iniziali**")
+        col_h1, col_h2, _ = st.columns([4, 4, 1])
+        with col_h1:
+            st.caption("Nome")
+        with col_h2:
+            st.caption("Descrizione (opzionale)")
+
+        n_fen = st.session_state.nmod_n_fenomeni
+        for i in range(n_fen):
+            cols = st.columns([4, 4, 1])
+            with cols[0]:
+                st.text_input("Nome", key=f"nmod_t_{i}",
+                              placeholder="Es. Intelligenza Artificiale generativa",
+                              label_visibility="collapsed")
+            with cols[1]:
+                st.text_input("Descrizione", key=f"nmod_d_{i}",
+                              placeholder="Breve descrizione del fenomeno...",
+                              label_visibility="collapsed")
+            with cols[2]:
+                if n_fen > 1 and st.button("🗑️", key=f"del_nmod_{i}"):
+                    for j in range(i, n_fen - 1):
+                        st.session_state[f"nmod_t_{j}"] = st.session_state.get(f"nmod_t_{j+1}", "")
+                        st.session_state[f"nmod_d_{j}"] = st.session_state.get(f"nmod_d_{j+1}", "")
+                    st.session_state.nmod_n_fenomeni -= 1
+                    st.rerun()
+
+        if st.button("➕ Aggiungi fenomeno", key="nmod_add"):
+            st.session_state.nmod_n_fenomeni += 1
+            st.rerun()
+
+        if st.button("Salva Modello", type="primary", use_container_width=True, key="nmod_save"):
+            titolo = st.session_state.get("nmod_titolo", "").strip()
+            dom = st.session_state.get("nmod_domanda", "").strip()
+            frame = st.session_state.get("nmod_frame", "").strip()
+            if not titolo or not dom or not frame:
                 st.error("Nome Modello, Domanda e Orizzonte sono campi obbligatori.")
             else:
-                key_points = [k.strip() for k in kp_mod.strip().splitlines() if k.strip()]
-                crea_modello(titolo_mod.strip(), dom_mod.strip(), frame_mod.strip(), key_points, fen_mod.strip())
-                st.success(f"Modello '{titolo_mod.strip()}' salvato con successo!")
+                kp_raw = st.session_state.get("nmod_kp", "")
+                key_points = [k.strip() for k in kp_raw.strip().splitlines() if k.strip()]
+                fen_lines = []
+                for i in range(n_fen):
+                    t = st.session_state.get(f"nmod_t_{i}", "").strip()
+                    d = st.session_state.get(f"nmod_d_{i}", "").strip()
+                    if t:
+                        fen_lines.append(f"{t}|{d}" if d else t)
+                crea_modello(titolo, dom, frame, key_points, "\n".join(fen_lines))
+                st.success(f"Modello '{titolo}' salvato con successo!")
+                st.session_state.nmod_n_fenomeni = 1
+                for i in range(50):
+                    st.session_state.pop(f"nmod_t_{i}", None)
+                    st.session_state.pop(f"nmod_d_{i}", None)
                 st.rerun()
                 
         st.divider()

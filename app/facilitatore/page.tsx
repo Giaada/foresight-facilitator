@@ -248,8 +248,20 @@ export default function PaginaFacilitatore() {
 
           <div className="space-y-3">
             {fenomeni.map((f, i) => (
-              <div key={i} className="border border-gray-100 rounded-lg p-3 space-y-2">
-                <div className="flex gap-2">
+              <div key={i} className="border border-gray-200 rounded-xl p-4 space-y-3 bg-gray-50/50">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Fenomeno {i + 1}</span>
+                  {fenomeni.length > 1 && (
+                    <button
+                      onClick={() => setFenomeni(fenomeni.filter((_, j) => j !== i))}
+                      className="text-gray-400 hover:text-red-500 p-1 rounded"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Nome</label>
                   <input
                     type="text"
                     value={f.testo}
@@ -258,29 +270,24 @@ export default function PaginaFacilitatore() {
                       nuovi[i] = { ...nuovi[i], testo: e.target.value };
                       setFenomeni(nuovi);
                     }}
-                    placeholder={`Fenomeno ${i + 1}`}
-                    className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Es. Intelligenza Artificiale generativa"
+                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
-                  {fenomeni.length > 1 && (
-                    <button
-                      onClick={() => setFenomeni(fenomeni.filter((_, j) => j !== i))}
-                      className="text-gray-400 hover:text-red-500 p-2"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  )}
                 </div>
-                <input
-                  type="text"
-                  value={f.descrizione}
-                  onChange={(e) => {
-                    const nuovi = [...fenomeni];
-                    nuovi[i] = { ...nuovi[i], descrizione: e.target.value };
-                    setFenomeni(nuovi);
-                  }}
-                  placeholder="Descrizione opzionale"
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs text-gray-600 focus:outline-none focus:ring-1 focus:ring-purple-400"
-                />
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Descrizione <span className="text-gray-400 font-normal">(opzionale)</span></label>
+                  <input
+                    type="text"
+                    value={f.descrizione}
+                    onChange={(e) => {
+                      const nuovi = [...fenomeni];
+                      nuovi[i] = { ...nuovi[i], descrizione: e.target.value };
+                      setFenomeni(nuovi);
+                    }}
+                    placeholder="Breve descrizione del fenomeno o trend"
+                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
               </div>
             ))}
           </div>

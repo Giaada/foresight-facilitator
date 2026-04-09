@@ -1,15 +1,18 @@
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore — file generato automaticamente da Prisma
-import { PrismaClient } from "@/app/generated/prisma";
+import { PrismaClient } from "../app/generated/prisma/client";
+import { PrismaLibSql } from "@prisma/adapter-libsql";
 
 const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
+  prisma: InstanceType<typeof PrismaClient> | undefined;
 };
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
-  });
+function createPrisma() {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL non impostata");
+  const adapter = new PrismaLibSql({ url });
+  // @ts-ignore — Prisma 7.x adapter API
+  return new PrismaClient({ adapter });
+}
+
+export const prisma = globalForPrisma.prisma ?? createPrisma();
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;

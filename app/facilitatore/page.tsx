@@ -1,7 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, LogIn, Compass, Trash2 } from "lucide-react";
+import { Plus, LogIn, Compass, Trash2, Upload, FileSpreadsheet } from "lucide-react";
+import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/Button";
 
 interface Fenomeno {
@@ -20,6 +21,28 @@ export default function PaginaFacilitatore() {
   const [fenomeni, setFenomeni] = useState<Fenomeno[]>([{ testo: "", descrizione: "" }]);
   const [caricamento, setCaricamento] = useState(false);
   const [errore, setErrore] = useState("");
+  const fileRefCreazione = useRef<HTMLInputElement>(null);
+
+  function parsaFileCreazione(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const wb = XLSX.read(ev.target?.result, { type: "array" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const righe = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1 });
+      const importati = righe
+        .slice(1)
+        .map((r) => ({ testo: String(r[0] ?? "").trim(), descrizione: String(r[1] ?? "").trim() }))
+        .filter((r) => r.testo.length > 0);
+      setFenomeni((prev) => {
+        const esistenti = prev.filter((f) => f.testo.trim());
+        return [...esistenti, ...importati];
+      });
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = "";
+  }
 
   // Form accesso sessione esistente
   const [codiceAccesso, setCodiceAccesso] = useState("");
@@ -298,6 +321,22 @@ export default function PaginaFacilitatore() {
             onClick={() => setFenomeni([...fenomeni, { testo: "", descrizione: "" }])}
           >
             <Plus size={14} className="mr-1" /> Aggiungi fenomeno
+          </Button>
+          <input
+            ref={fileRefCreazione}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            className="hidden"
+            onChange={parsaFileCreazione}
+          />
+          <Button
+            variante="ghost"
+            dimensione="sm"
+            onClick={() => fileRefCreazione.current?.click()}
+            className="w-full border border-dashed border-gray-300 hover:border-indigo-400"
+          >
+            <Upload size={14} className="mr-1" />
+            <FileSpreadsheet size={14} className="mr-1" /> Importa da Excel / CSV
           </Button>
         </div>
 

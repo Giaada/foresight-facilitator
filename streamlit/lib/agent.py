@@ -111,7 +111,7 @@ def invia_messaggio(scenario, sessione, testo_utente):
 
     try:
         risposta = client.messages.create(
-            model="claude-sonnet-4-6",
+            model="claude-3-5-sonnet-20241022",
             max_tokens=1024,
             system=sistema_prompt(scenario, sessione, key_points),
             messages=history,
@@ -130,6 +130,16 @@ def invia_messaggio(scenario, sessione, testo_utente):
                 testo_risposta = parsed.get("testo") or "Risposta non decifrabile."
                 nuovo_step = parsed.get("nuovo_step")
                 agg = parsed.get("aggiornamenti") or {}
+                if not agg:
+                    agg = {
+                        "narrativa": parsed.get("narrativa"),
+                        "titolo": parsed.get("titolo"),
+                        "minacce": parsed.get("minacce", []),
+                        "opportunita": parsed.get("opportunita", []),
+                        "key_points_data": parsed.get("key_points_data", {})
+                    }
+            else:
+                testo_risposta = "Ho elaborato i dati ma c'è stato un piccolo inciampo di formato. Cosa dicevamo?"
         except Exception:
             # Fallback in caso di delirio LLM: restituisce almeno il parse rotto mascherato
             testo_risposta = "Ho elaborato i dati ma c'è stato un piccolo inciampo di comunicazione testuale. Cosa dicevamo?"
@@ -167,7 +177,8 @@ def invia_messaggio(scenario, sessione, testo_utente):
         aggiungi_messaggio(scenario["id"], "assistant", msg)
         return msg, None
     except Exception as e:
-        msg = f"⚠️ Errore dell'agente: {str(e)}"
+        print(f"Errore dell'agente: {e}")
+        msg = "⚠️ Si è verificato un errore di connessione con l'Agente AI. Assicurati che l'API sia attiva o riprova a inviare il messaggio."
         aggiungi_messaggio(scenario["id"], "assistant", msg)
         return msg, None
 
@@ -199,12 +210,13 @@ Rispondi SOLO con il testo del messaggio, in italiano."""
 
     try:
         risposta = client.messages.create(
-            model="claude-sonnet-4-6",
+            model="claude-3-5-sonnet-20241022",
             max_tokens=512,
             messages=[{"role": "user", "content": prompt}]
         )
         testo = risposta.content[0].text
-    except Exception:
+    except Exception as e:
+        print(f"Errore avvia_scenario: {e}")
         primo_kp = key_points[0] if key_points else "Come immaginate questo scenario?"
         testo = (
             f"Benvenuti allo Scenario {scenario['numero']}!\n\n"
@@ -267,7 +279,7 @@ Rispondi SOLO con un JSON con la seguente struttura:
 
     try:
         risposta = client.messages.create(
-            model="claude-sonnet-4-6",
+            model="claude-3-5-sonnet-20241022",
             max_tokens=2000,
             system="Sei un facilitatore imparziale capace di fare eccellenti sintesi analitiche. Rispondi SEMPRE E SOLO con un JSON valido.",
             messages=[{"role": "user", "content": prompt}]

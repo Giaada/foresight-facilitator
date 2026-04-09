@@ -49,6 +49,7 @@ export function VistaScenarioPlanningGruppo({ partecipante, sessioneId, socket, 
   const [quadrante, setQuadrante] = useState<string | null>(null);
   const [driverInfo, setDriverInfo] = useState<any>(null);
   const chatRef = useRef<HTMLDivElement>(null);
+  const avviatoRef = useRef(false);
 
   const caricaGruppo = useCallback(async () => {
     const res = await fetch(`/api/gruppi?codicePartecipante=${partecipante.codice}`);
@@ -79,8 +80,9 @@ export function VistaScenarioPlanningGruppo({ partecipante, sessioneId, socket, 
     if (!gruppoId || !socket) return;
     socket.emit("entra_gruppo", { gruppoId });
 
-    // Avvia agente se non ci sono messaggi
-    if (messaggi.length === 0) {
+    // Avvia agente una sola volta, solo se non ci sono ancora messaggi
+    if (messaggi.length === 0 && !avviatoRef.current) {
+      avviatoRef.current = true;
       socket.emit("messaggio_utente", {
         gruppoId,
         autore: "__sistema__",
@@ -108,7 +110,8 @@ export function VistaScenarioPlanningGruppo({ partecipante, sessioneId, socket, 
       socket.off("step_aggiornato");
       socket.off("scenario_aggiornato");
     };
-  }, [gruppoId, socket, messaggi.length]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gruppoId, socket]);
 
   // Scroll automatico
   useEffect(() => {

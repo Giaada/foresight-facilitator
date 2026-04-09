@@ -2,7 +2,8 @@ export type StatoSessione =
   | "setup"
   | "horizon_scanning"
   | "transizione"
-  | "scenario_planning"
+  | "scenario_planning_individuale"
+  | "scenario_planning_gruppo"
   | "concluso";
 
 export type StepScenario =

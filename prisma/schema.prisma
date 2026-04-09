@@ -14,7 +14,7 @@ model Sessione {
   domandaRicerca  String
   frameTemporale  String
   keyPoints       String   // JSON array di stringhe
-  stato           String   @default("setup") // setup | horizon_scanning | transizione | scenario_planning | concluso
+  stato           String   @default("setup") // setup | horizon_scanning | transizione | scenario_planning_individuale | scenario_planning_gruppo | concluso
   driver1Nome     String?
   driver1PosPolo  String?
   driver1NegPolo  String?
@@ -24,9 +24,10 @@ model Sessione {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  fenomeni       Fenomeno[]
-  partecipanti   Partecipante[]
-  gruppi         Gruppo[]
+  fenomeni              Fenomeno[]
+  partecipanti          Partecipante[]
+  gruppi                Gruppo[]
+  scenariIndividuali    ScenarioIndividuale[]
 }
 
 model Fenomeno {
@@ -53,7 +54,8 @@ model Partecipante {
   votato     Boolean  @default(false)
   createdAt  DateTime @default(now())
 
-  voti Voto[]
+  voti                 Voto[]
+  scenarioIndividuale  ScenarioIndividuale?
 }
 
 model Voto {
@@ -103,4 +105,34 @@ model ScenarioOutput {
   opportunita   String?  // JSON array
   keyPointsData String?  // JSON object con risposte per key point
   updatedAt     DateTime @updatedAt
+}
+
+model ScenarioIndividuale {
+  id             String       @id @default(cuid())
+  partecipanteId String       @unique
+  partecipante   Partecipante @relation(fields: [partecipanteId], references: [id], onDelete: Cascade)
+  sessioneId     String
+  sessione       Sessione     @relation(fields: [sessioneId], references: [id], onDelete: Cascade)
+  quadrante      String
+  stepCorrente   String       @default("intro")
+  narrativa      String?
+  titolo         String?
+  minacce        String?      // JSON array
+  opportunita    String?      // JSON array
+  keyPointsData  String?      // JSON object
+  concluso       Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  messaggi MessaggioChatIndividuale[]
+}
+
+model MessaggioChatIndividuale {
+  id                    String              @id @default(cuid())
+  autore                String
+  ruolo                 String              // "assistant" | "user"
+  contenuto             String
+  scenarioIndividualeId String
+  scenarioIndividuale   ScenarioIndividuale @relation(fields: [scenarioIndividualeId], references: [id], onDelete: Cascade)
+  createdAt             DateTime            @default(now())
 }

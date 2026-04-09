@@ -5,6 +5,7 @@ import { io, Socket } from "socket.io-client";
 import { HeaderSessione } from "@/components/shared/HeaderSessione";
 import { VistaHorizonScanningPartecipante } from "@/components/partecipante/VistaHorizonScanningPartecipante";
 import { VistaScenarioPlanningGruppo } from "@/components/partecipante/VistaScenarioPlanningGruppo";
+import { VistaScenarioPlanningIndividuale } from "@/components/partecipante/VistaScenarioPlanningIndividuale";
 import type { StatoSessione } from "@/lib/types";
 
 interface Sessione {
@@ -145,7 +146,16 @@ export default function PaginaSessione() {
           </div>
         )}
 
-        {(sessione.stato === "scenario_planning" || sessione.stato === "concluso") && (
+        {sessione.stato === "scenario_planning_individuale" && (
+          <VistaScenarioPlanningIndividuale
+            partecipante={partecipante}
+            sessioneId={sessione.id}
+            socket={socket}
+            sessione={sessione}
+          />
+        )}
+
+        {(sessione.stato === "scenario_planning_gruppo" || sessione.stato === "concluso") && (
           <VistaScenarioPlanningGruppo
             partecipante={partecipante}
             sessioneId={sessione.id}

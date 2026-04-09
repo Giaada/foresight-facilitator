@@ -6,7 +6,8 @@ const LABEL_STATO: Record<StatoSessione, string> = {
   setup: "Setup",
   horizon_scanning: "Horizon Scanning",
   transizione: "Transizione",
-  scenario_planning: "Scenario Planning",
+  scenario_planning_individuale: "Scenario — Individuale",
+  scenario_planning_gruppo: "Scenario — Gruppo",
   concluso: "Concluso",
 };
 
@@ -14,7 +15,8 @@ const COLORE_STATO: Record<StatoSessione, string> = {
   setup: "bg-gray-100 text-gray-700",
   horizon_scanning: "bg-blue-100 text-blue-800",
   transizione: "bg-yellow-100 text-yellow-800",
-  scenario_planning: "bg-indigo-100 text-indigo-800",
+  scenario_planning_individuale: "bg-violet-100 text-violet-800",
+  scenario_planning_gruppo: "bg-indigo-100 text-indigo-800",
   concluso: "bg-green-100 text-green-800",
 };
 

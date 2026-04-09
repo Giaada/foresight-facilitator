@@ -3,7 +3,7 @@ import { parse } from "url";
 import next from "next";
 import { Server as SocketIOServer } from "socket.io";
 import { prisma } from "./lib/prisma";
-import { eseguiStepAgente } from "./lib/agent";
+import { eseguiStepAgente, eseguiStepAgenteIndividuale } from "./lib/agent";
 
 const dev = process.env.NODE_ENV !== "production";
 const app = next({ dev });
@@ -18,6 +18,20 @@ app.prepare().then(() => {
   const io = new SocketIOServer(httpServer, {
     cors: { origin: "*", methods: ["GET", "POST"] },
   });
+
+  // Coda sequenziale per gruppo: evita chiamate API concorrenti per lo stesso gruppo
+  const gruppoQueue = new Map<string, Promise<void>>();
+
+  function accodaPerGruppo(gruppoId: string, fn: () => Promise<void>): void {
+    const prev = gruppoQueue.get(gruppoId) ?? Promise.resolve();
+    const next = prev
+      .then(fn)
+      .catch((err) => console.error("[Agente] errore in coda:", err))
+      .finally(() => {
+        if (gruppoQueue.get(gruppoId) === next) gruppoQueue.delete(gruppoId);
+      });
+    gruppoQueue.set(gruppoId, next);
+  }
 
   // Mappa: sessioneId → socket rooms
   io.on("connection", (socket) => {
@@ -48,94 +62,180 @@ app.prepare().then(() => {
         autore: string;
         contenuto: string;
       }) => {
-        // Salva messaggio utente
-        const msg = await prisma.messaggioChat.create({
-          data: { gruppoId, autore, ruolo: "user", contenuto },
-        });
+        // Messaggi reali (non di sistema): salva e broadcast immediatamente
+        if (autore !== "__sistema__") {
+          const msg = await prisma.messaggioChat.create({
+            data: { gruppoId, autore, ruolo: "user", contenuto },
+          });
+          io.to(`gruppo:${gruppoId}`).emit("nuovo_messaggio", {
+            id: msg.id,
+            autore: msg.autore,
+            ruolo: msg.ruolo,
+            contenuto: msg.contenuto,
+            createdAt: msg.createdAt,
+          });
+        }
 
-        // Broadcast al gruppo
-        io.to(`gruppo:${gruppoId}`).emit("nuovo_messaggio", {
-          id: msg.id,
-          autore: msg.autore,
-          ruolo: msg.ruolo,
-          contenuto: msg.contenuto,
-          createdAt: msg.createdAt,
-        });
+        // Accoda risposta agente: sequenziale per gruppo, nessuna chiamata concorrente
+        accodaPerGruppo(gruppoId, async () => {
+          // Deduplicazione __avvia__: salta se l'agente ha già risposto
+          if (autore === "__sistema__" && contenuto === "__avvia__") {
+            const count = await prisma.messaggioChat.count({
+              where: { gruppoId, ruolo: "assistant" },
+            });
+            if (count > 0) return;
+          }
 
-        // Esegui risposta agente
-        try {
           const risposta = await eseguiStepAgente(gruppoId, contenuto);
-          if (risposta) {
-            // Salva messaggio agente
-            const msgAgente = await prisma.messaggioChat.create({
-              data: { gruppoId, autore: "agente", ruolo: "assistant", contenuto: risposta.testo },
+          if (!risposta) return;
+
+          // Salva e broadcast risposta agente
+          const msgAgente = await prisma.messaggioChat.create({
+            data: { gruppoId, autore: "agente", ruolo: "assistant", contenuto: risposta.testo },
+          });
+          io.to(`gruppo:${gruppoId}`).emit("nuovo_messaggio", {
+            id: msgAgente.id,
+            autore: "agente",
+            ruolo: "assistant",
+            contenuto: msgAgente.contenuto,
+            createdAt: msgAgente.createdAt,
+          });
+
+          // Aggiorna step se cambiato
+          if (risposta.nuovoStep) {
+            await prisma.gruppo.update({
+              where: { id: gruppoId },
+              data: { stepCorrente: risposta.nuovoStep },
             });
-
-            io.to(`gruppo:${gruppoId}`).emit("nuovo_messaggio", {
-              id: msgAgente.id,
-              autore: "agente",
-              ruolo: "assistant",
-              contenuto: msgAgente.contenuto,
-              createdAt: msgAgente.createdAt,
+            io.to(`gruppo:${gruppoId}`).emit("step_aggiornato", {
+              gruppoId,
+              step: risposta.nuovoStep,
             });
-
-            // Aggiorna step se cambiato
-            if (risposta.nuovoStep) {
-              await prisma.gruppo.update({
-                where: { id: gruppoId },
-                data: { stepCorrente: risposta.nuovoStep },
-              });
-
-              io.to(`gruppo:${gruppoId}`).emit("step_aggiornato", {
+            const gruppo = await prisma.gruppo.findUnique({ where: { id: gruppoId } });
+            if (gruppo) {
+              io.to(`sessione:${gruppo.sessioneId}:facilitatore`).emit("gruppo_aggiornato", {
                 gruppoId,
                 step: risposta.nuovoStep,
               });
-
-              // Notifica facilitatore
-              const gruppo = await prisma.gruppo.findUnique({
-                where: { id: gruppoId },
-              });
-              if (gruppo) {
-                io.to(`sessione:${gruppo.sessioneId}:facilitatore`).emit("gruppo_aggiornato", {
-                  gruppoId,
-                  step: risposta.nuovoStep,
-                });
-              }
-            }
-
-            // Aggiorna scenario output se presente
-            if (risposta.outputAggiornato) {
-              const { narrativa, titolo, minacce, opportunita, keyPointsData } =
-                risposta.outputAggiornato;
-
-              await prisma.scenarioOutput.upsert({
-                where: { gruppoId },
-                create: {
-                  gruppoId,
-                  narrativa: narrativa ?? null,
-                  titolo: titolo ?? null,
-                  minacce: minacce ? JSON.stringify(minacce) : null,
-                  opportunita: opportunita ? JSON.stringify(opportunita) : null,
-                  keyPointsData: keyPointsData ? JSON.stringify(keyPointsData) : null,
-                },
-                update: {
-                  narrativa: narrativa ?? undefined,
-                  titolo: titolo ?? undefined,
-                  minacce: minacce ? JSON.stringify(minacce) : undefined,
-                  opportunita: opportunita ? JSON.stringify(opportunita) : undefined,
-                  keyPointsData: keyPointsData ? JSON.stringify(keyPointsData) : undefined,
-                },
-              });
-
-              io.to(`gruppo:${gruppoId}`).emit("scenario_aggiornato", {
-                gruppoId,
-                output: risposta.outputAggiornato,
-              });
             }
           }
-        } catch (err) {
-          console.error("[Agente] errore:", err);
+
+          // Aggiorna scenario output se presente
+          if (risposta.outputAggiornato) {
+            const { narrativa, titolo, minacce, opportunita, keyPointsData } =
+              risposta.outputAggiornato;
+            await prisma.scenarioOutput.upsert({
+              where: { gruppoId },
+              create: {
+                gruppoId,
+                narrativa: narrativa ?? null,
+                titolo: titolo ?? null,
+                minacce: minacce ? JSON.stringify(minacce) : null,
+                opportunita: opportunita ? JSON.stringify(opportunita) : null,
+                keyPointsData: keyPointsData ? JSON.stringify(keyPointsData) : null,
+              },
+              update: {
+                narrativa: narrativa ?? undefined,
+                titolo: titolo ?? undefined,
+                minacce: minacce ? JSON.stringify(minacce) : undefined,
+                opportunita: opportunita ? JSON.stringify(opportunita) : undefined,
+                keyPointsData: keyPointsData ? JSON.stringify(keyPointsData) : undefined,
+              },
+            });
+            io.to(`gruppo:${gruppoId}`).emit("scenario_aggiornato", {
+              gruppoId,
+              output: risposta.outputAggiornato,
+            });
+          }
+        });
+      }
+    );
+
+    // Partecipante entra nella stanza individuale
+    socket.on("entra_individuale", ({ scenarioIndividualeId }: { scenarioIndividualeId: string }) => {
+      socket.join(`individuale:${scenarioIndividualeId}`);
+    });
+
+    // Messaggio individuale (fase scenario_planning_individuale)
+    socket.on(
+      "messaggio_individuale",
+      async ({
+        scenarioIndividualeId,
+        autore,
+        contenuto,
+      }: {
+        scenarioIndividualeId: string;
+        autore: string;
+        contenuto: string;
+      }) => {
+        if (autore !== "__sistema__") {
+          const msg = await prisma.messaggioChatIndividuale.create({
+            data: { scenarioIndividualeId, autore, ruolo: "user", contenuto },
+          });
+          socket.emit("nuovo_messaggio_individuale", {
+            id: msg.id, autore: msg.autore, ruolo: msg.ruolo,
+            contenuto: msg.contenuto, createdAt: msg.createdAt,
+          });
         }
+
+        accodaPerGruppo(`ind:${scenarioIndividualeId}`, async () => {
+          if (autore === "__sistema__" && contenuto === "__avvia__") {
+            const count = await prisma.messaggioChatIndividuale.count({
+              where: { scenarioIndividualeId, ruolo: "assistant" },
+            });
+            if (count > 0) return;
+          }
+
+          const risposta = await eseguiStepAgenteIndividuale(scenarioIndividualeId, contenuto);
+          if (!risposta) return;
+
+          const msgAgente = await prisma.messaggioChatIndividuale.create({
+            data: { scenarioIndividualeId, autore: "agente", ruolo: "assistant", contenuto: risposta.testo },
+          });
+          io.to(`individuale:${scenarioIndividualeId}`).emit("nuovo_messaggio_individuale", {
+            id: msgAgente.id, autore: "agente", ruolo: "assistant",
+            contenuto: msgAgente.contenuto, createdAt: msgAgente.createdAt,
+          });
+
+          if (risposta.nuovoStep) {
+            await prisma.scenarioIndividuale.update({
+              where: { id: scenarioIndividualeId },
+              data: { stepCorrente: risposta.nuovoStep },
+            });
+            socket.emit("step_individuale_aggiornato", { step: risposta.nuovoStep });
+          }
+
+          if (risposta.outputAggiornato) {
+            const { narrativa, titolo, minacce, opportunita, keyPointsData } = risposta.outputAggiornato;
+            await prisma.scenarioIndividuale.update({
+              where: { id: scenarioIndividualeId },
+              data: {
+                narrativa: narrativa ?? undefined,
+                titolo: titolo ?? undefined,
+                minacce: minacce ? JSON.stringify(minacce) : undefined,
+                opportunita: opportunita ? JSON.stringify(opportunita) : undefined,
+                keyPointsData: keyPointsData ? JSON.stringify(keyPointsData) : undefined,
+              },
+            });
+            socket.emit("scenario_individuale_aggiornato", { output: risposta.outputAggiornato });
+          }
+        });
+      }
+    );
+
+    // Partecipante dichiara lavoro individuale concluso
+    socket.on(
+      "individuale_concluso",
+      async ({ scenarioIndividualeId, sessioneId }: { scenarioIndividualeId: string; sessioneId: string }) => {
+        await prisma.scenarioIndividuale.update({
+          where: { id: scenarioIndividualeId },
+          data: { concluso: true, stepCorrente: "concluso" },
+        });
+        const totale = await prisma.scenarioIndividuale.count({ where: { sessioneId } });
+        const conclusi = await prisma.scenarioIndividuale.count({ where: { sessioneId, concluso: true } });
+        io.to(`sessione:${sessioneId}:facilitatore`).emit("individuale_completato", {
+          scenarioIndividualeId, conclusi, totale,
+        });
       }
     );
 

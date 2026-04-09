@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { GripVertical, Plus, CheckCircle, Send } from "lucide-react";
+import { GripVertical, Plus, CheckCircle, Send, Info } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -44,37 +44,65 @@ interface Props {
   socket: Socket | null;
 }
 
-function ItemSortable({ fenomeno, posizione }: { fenomeno: Fenomeno; posizione: number }) {
+function zonaStile(posizione: number, totale: number) {
+  const terzo = Math.ceil(totale / 3);
+  if (posizione <= terzo) return {
+    border: "border-l-green-400",
+    badge: "text-green-700 bg-green-50",
+  };
+  if (posizione <= terzo * 2) return {
+    border: "border-l-amber-400",
+    badge: "text-amber-700 bg-amber-50",
+  };
+  return {
+    border: "border-l-gray-300",
+    badge: "text-gray-500 bg-gray-100",
+  };
+}
+
+function ItemSortable({ fenomeno, posizione, totale }: { fenomeno: Fenomeno; posizione: number; totale: number }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: fenomeno.id,
   });
+  const [mostraDesc, setMostraDesc] = useState(false);
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.4 : 1,
   };
 
+  const stile = zonaStile(posizione, totale);
+
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-sm hover:border-indigo-300 transition-colors"
-    >
-      <span className="text-xs font-bold text-indigo-500 w-5 text-right shrink-0">{posizione}</span>
-      <button
-        {...attributes}
-        {...listeners}
-        className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing shrink-0"
-      >
-        <GripVertical size={18} />
-      </button>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-gray-800 font-medium">{fenomeno.testo}</p>
+    <div ref={setNodeRef} style={style} className="relative">
+      <div className={`flex items-center gap-2 bg-white border border-gray-200 border-l-4 ${stile.border} rounded-lg px-3 py-1.5 shadow-sm transition-colors hover:border-r-gray-300`}>
+        <span className={`text-xs font-bold w-6 text-center shrink-0 rounded px-1 py-0.5 ${stile.badge}`}>
+          {posizione}
+        </span>
+        <button
+          {...attributes}
+          {...listeners}
+          className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing shrink-0"
+        >
+          <GripVertical size={15} />
+        </button>
+        <p className="flex-1 min-w-0 text-sm text-gray-800 truncate">{fenomeno.testo}</p>
         {fenomeno.descrizione && (
-          <p className="text-xs text-gray-400 mt-0.5">{fenomeno.descrizione}</p>
+          <button
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => setMostraDesc((v) => !v)}
+            className={`shrink-0 transition-colors ${mostraDesc ? "text-indigo-500" : "text-gray-300 hover:text-indigo-400"}`}
+          >
+            <Info size={14} />
+          </button>
         )}
       </div>
+      {mostraDesc && fenomeno.descrizione && (
+        <div className="absolute left-0 right-0 top-full mt-1 z-20 bg-gray-800 text-white text-xs rounded-lg px-3 py-2 shadow-lg leading-relaxed">
+          {fenomeno.descrizione}
+        </div>
+      )}
     </div>
   );
 }
@@ -176,11 +204,18 @@ export function VistaHorizonScanningPartecipante({ sessione, partecipante, socke
         </p>
       </div>
 
+      {/* Legenda zone */}
+      <div className="flex items-center gap-3 text-xs text-gray-400">
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-green-400 inline-block" /> Alta priorità</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-400 inline-block" /> Media</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-gray-300 inline-block" /> Bassa priorità</span>
+      </div>
+
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {items.map((f, i) => (
-              <ItemSortable key={f.id} fenomeno={f} posizione={i + 1} />
+              <ItemSortable key={f.id} fenomeno={f} posizione={i + 1} totale={items.length} />
             ))}
           </div>
         </SortableContext>

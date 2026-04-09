@@ -7,6 +7,7 @@ import { VistaPannelloSetup } from "@/components/facilitatore/VistaPannelloSetup
 import { VistaHorizonScanning } from "@/components/facilitatore/VistaHorizonScanning";
 import { VistaTransizione } from "@/components/facilitatore/VistaTransizione";
 import { VistaScenarioPlanning } from "@/components/facilitatore/VistaScenarioPlanning";
+import { VistaScenarioIndividuale } from "@/components/facilitatore/VistaScenarioIndividuale";
 import type { StatoSessione } from "@/lib/types";
 
 interface DatiSessione {
@@ -65,6 +66,7 @@ export default function DashboardFacilitatore() {
   const [dati, setDati] = useState<DatiSessione | null>(null);
   const [errore, setErrore] = useState("");
   const [socket, setSocket] = useState<Socket | null>(null);
+  const [conclusiCount, setConclusiCount] = useState(0);
 
   const caricaDati = useCallback(async () => {
     const res = await fetch(`/api/sessione/facilitatore?codice=${codice}`);
@@ -113,6 +115,11 @@ export default function DashboardFacilitatore() {
           ),
         };
       });
+    });
+
+    s.on("individuale_completato", ({ conclusi, totale }: { scenarioIndividualeId: string; conclusi: number; totale: number }) => {
+      setConclusiCount(conclusi);
+      if (conclusi >= totale) caricaDati();
     });
 
     s.on("stato_aggiornato", ({ stato }: { stato: StatoSessione }) => {
@@ -227,12 +234,24 @@ export default function DashboardFacilitatore() {
           <VistaTransizione
             dati={dati}
             codiceFacilitatore={codice}
-            onAvviaScenarioPlanning={() => cambiaStato("scenario_planning")}
+            onAvviaScenarioPlanning={() => cambiaStato("scenario_planning_individuale")}
             onAggiorna={caricaDati}
           />
         )}
 
-        {(dati.stato === "scenario_planning" || dati.stato === "concluso") && (
+        {dati.stato === "scenario_planning_individuale" && (
+          <VistaScenarioIndividuale
+            dati={dati}
+            codiceFacilitatore={codice}
+            conclusiCount={conclusiCount}
+            onSintetizzaEAvanza={() => {
+              socket?.emit("stato_aggiornato", { sessioneId: dati.id, stato: "scenario_planning_gruppo" });
+              caricaDati();
+            }}
+          />
+        )}
+
+        {(dati.stato === "scenario_planning_gruppo" || dati.stato === "concluso") && (
           <VistaScenarioPlanning
             dati={dati}
             onChiudiSessione={() => cambiaStato("concluso")}

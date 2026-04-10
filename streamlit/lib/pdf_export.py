@@ -140,28 +140,28 @@ def _build_pdf_quadrant_matrix(sessione, scenari):
         return q
 
     return f"""
-    <div style="position: relative; width: 280px; height: 230px; margin: 25px auto 35px auto; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-      <!-- Label Asse Y: top (+) and bottom (-), horizontal -->
-      <div style="position: absolute; bottom: calc(100% - 2px); left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: bold; color: #64748b; text-align: center; max-width: 140px; line-height: 1.2; display: flex; align-items: flex-end; justify-content: center;">{d2p}</div>
-      <div style="position: absolute; top: calc(100% - 2px); left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: bold; color: #64748b; text-align: center; max-width: 140px; line-height: 1.2; display: flex; align-items: flex-start; justify-content: center;">{d2n}</div>
-      <!-- Label Asse X: left (-) and right (+), horizontal -->
-      <div style="position: absolute; top: 50%; right: calc(100% - 2px); transform: translateY(-50%); font-size: 10px; font-weight: bold; color: #64748b; text-align: right; max-width: 80px; line-height: 1.2;">{d1n}</div>
-      <div style="position: absolute; top: 50%; left: calc(100% + 5px); transform: translateY(-50%); font-size: 10px; font-weight: bold; color: #64748b; text-align: left; max-width: 80px; line-height: 1.2;">{d1p}</div>
+    <div style="position: relative; width: 420px; height: 340px; margin: 30px auto 45px auto; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+      <!-- Label Asse Y -->
+      <div style="position: absolute; bottom: calc(100% - 2px); left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: bold; color: #64748b; text-align: center; max-width: 180px; line-height: 1.2;">{d2p}</div>
+      <div style="position: absolute; top: calc(100% - 2px); left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: bold; color: #64748b; text-align: center; max-width: 180px; line-height: 1.2;">{d2n}</div>
+      <!-- Label Asse X -->
+      <div style="position: absolute; top: 50%; right: calc(100% - 2px); transform: translateY(-50%); font-size: 11px; font-weight: bold; color: #64748b; text-align: right; max-width: 100px; line-height: 1.2;">{d1n}</div>
+      <div style="position: absolute; top: 50%; left: calc(100% + 6px); transform: translateY(-50%); font-size: 11px; font-weight: bold; color: #64748b; text-align: left; max-width: 100px; line-height: 1.2;">{d1p}</div>
 
-      <!-- Quadranti con nomi scenari -->
-      <div style="position: absolute; inset: 18px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 3px;">
-        <div style="background: #EEF2FF; border-radius: 6px 0 0 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 5px; font-size: 10px; color: #312E81; font-weight: 600; line-height: 1.3;">{_label('-+')}</div>
-        <div style="background: #EEF2FF; border-radius: 0 6px 0 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 5px; font-size: 10px; color: #312E81; font-weight: 600; line-height: 1.3;">{_label('++')}</div>
-        <div style="background: #EEF2FF; border-radius: 0 0 0 6px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 5px; font-size: 10px; color: #312E81; font-weight: 600; line-height: 1.3;">{_label('--')}</div>
-        <div style="background: #EEF2FF; border-radius: 0 0 6px 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 5px; font-size: 10px; color: #312E81; font-weight: 600; line-height: 1.3;">{_label('+-')}</div>
+      <!-- Quadranti -->
+      <div style="position: absolute; inset: 22px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 4px;">
+        <div style="background: #EEF2FF; border-radius: 8px 0 0 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 10px; font-size: 12px; color: #312E81; font-weight: 600; line-height: 1.4;">{_label('-+')}</div>
+        <div style="background: #EEF2FF; border-radius: 0 8px 0 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 10px; font-size: 12px; color: #312E81; font-weight: 600; line-height: 1.4;">{_label('++')}</div>
+        <div style="background: #EEF2FF; border-radius: 0 0 0 8px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 10px; font-size: 12px; color: #312E81; font-weight: 600; line-height: 1.4;">{_label('--')}</div>
+        <div style="background: #EEF2FF; border-radius: 0 0 8px 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 10px; font-size: 12px; color: #312E81; font-weight: 600; line-height: 1.4;">{_label('+-')}</div>
       </div>
 
-      <!-- Asse Y: linea + freccia SOLO in alto -->
-      <div style="position: absolute; left: 50%; top: 8px; bottom: 4px; width: 2px; background: #1e293b; transform: translateX(-50%); z-index: 10;"></div>
-      <div style="position: absolute; left: 50%; top: 2px; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 7px solid #1e293b; transform: translateX(-50%); z-index: 10;"></div>
-      <!-- Asse X: linea + freccia SOLO a destra -->
-      <div style="position: absolute; top: 50%; left: 4px; right: 8px; height: 2px; background: #1e293b; transform: translateY(-50%); z-index: 10;"></div>
-      <div style="position: absolute; top: 50%; right: 2px; width: 0; height: 0; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-left: 7px solid #1e293b; transform: translateY(-50%); z-index: 10;"></div>
+      <!-- Asse Y -->
+      <div style="position: absolute; left: 50%; top: 10px; bottom: 5px; width: 2px; background: #1e293b; transform: translateX(-50%); z-index: 10;"></div>
+      <div style="position: absolute; left: 50%; top: 3px; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 8px solid #1e293b; transform: translateX(-50%); z-index: 10;"></div>
+      <!-- Asse X -->
+      <div style="position: absolute; top: 50%; left: 5px; right: 10px; height: 2px; background: #1e293b; transform: translateY(-50%); z-index: 10;"></div>
+      <div style="position: absolute; top: 50%; right: 3px; width: 0; height: 0; border-top: 6px solid transparent; border-bottom: 6px solid transparent; border-left: 8px solid #1e293b; transform: translateY(-50%); z-index: 10;"></div>
     </div>
     """
 
@@ -239,36 +239,62 @@ def st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti, partecipanti
     # ── Costruisce HTML direttamente ──────────────────────────
     s = []
 
-    # — Copertina —
     s.append("<div id='pdf-body'>")
-    s.append(f"<h1>📊 Report Foresight — Sessione #{sid}</h1>")
-    s.append("<div class='meta-row'>")
-    s.append(f"<div class='meta-item'><div class='meta-label'>Domanda di ricerca</div>{_esc(sessione['domanda_ricerca'])}</div>")
-    s.append("</div>")
-    s.append("<div class='meta-row'>")
-    s.append(f"<div class='meta-item'><div class='meta-label'>Orizzonte temporale</div>{_esc(sessione.get('frame_temporale','—'))}</div>")
-    s.append(f"<div class='meta-item'><div class='meta-label'>Codice sessione</div><code>{_esc(sessione.get('codice','—'))}</code></div>")
-    s.append(f"<div class='meta-item'><div class='meta-label'>Stato</div>{_esc(sessione.get('stato','—'))}</div>")
-    s.append("</div>")
 
-    # — Partecipanti —
+    # — Copertina (prima pagina, no page-break) —
+    s.append(f"<h1>Report Foresight — Sessione #{sid}</h1>")
+
+    # Box domanda di ricerca
+    s.append(
+        f"<div style='background:#EEF2FF;border-left:5px solid #4F46E5;border-radius:8px;"
+        f"padding:14px 18px;margin-bottom:16px;'>"
+        f"<div style='font-size:11px;font-weight:700;color:#4338CA;text-transform:uppercase;"
+        f"letter-spacing:0.05em;margin-bottom:6px;'>Domanda di ricerca</div>"
+        f"<div style='font-size:14px;color:#1e1b4b;font-weight:600;line-height:1.5;'>"
+        f"{_esc(sessione['domanda_ricerca'])}</div>"
+        f"</div>"
+    )
+
+    # Metadati inline
+    s.append(
+        f"<div style='display:flex;gap:24px;flex-wrap:wrap;margin-bottom:16px;'>"
+        f"<div><div style='font-size:10px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:0.05em;'>Orizzonte temporale</div>"
+        f"<div style='font-size:13px;color:#111827;font-weight:600;'>{_esc(sessione.get('frame_temporale','—'))}</div></div>"
+        f"<div><div style='font-size:10px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:0.05em;'>Codice sessione</div>"
+        f"<div style='font-size:13px;color:#111827;font-family:monospace;'>{_esc(sessione.get('codice','—'))}</div></div>"
+        f"</div>"
+    )
+
+    # Partecipanti nella prima pagina
     if partecipanti:
-        s.append("<div class='section'>")
-        s.append("<h2>👥 Partecipanti</h2>")
         nomi = ", ".join(_esc(p.get("nome", "?")) for p in partecipanti)
-        s.append(f"<p>{nomi}</p>")
-        s.append("</div>")
+        s.append(
+            f"<div style='background:#F0FDF4;border-left:5px solid #10B981;border-radius:8px;"
+            f"padding:12px 18px;margin-bottom:16px;'>"
+            f"<div style='font-size:11px;font-weight:700;color:#065F46;text-transform:uppercase;"
+            f"letter-spacing:0.05em;margin-bottom:6px;'>Partecipanti</div>"
+            f"<div style='font-size:13px;color:#1F2937;line-height:1.6;'>{nomi}</div>"
+            f"</div>"
+        )
 
-    # — Driver —
+    # — Driver (nuova pagina) —
     if sessione.get("driver1_nome") or sessione.get("driver2_nome"):
         s.append("<div class='section'>")
         s.append("<h2>🔀 Driver degli Scenari</h2>")
-        s.append("<ul>")
-        s.append(f"<li><strong>Driver 1:</strong> {_esc(sessione.get('driver1_nome','—'))} "
-                 f"(+: {_esc(sessione.get('driver1_pos','?'))} / −: {_esc(sessione.get('driver1_neg','?'))})</li>")
-        s.append(f"<li><strong>Driver 2:</strong> {_esc(sessione.get('driver2_nome','—'))} "
-                 f"(+: {_esc(sessione.get('driver2_pos','?'))} / −: {_esc(sessione.get('driver2_neg','?'))})</li>")
-        s.append("</ul>")
+        s.append(
+            f"<div style='display:flex;gap:16px;margin-bottom:8px;'>"
+            f"<div style='flex:1;background:#F8FAFC;border-left:4px solid #94A3B8;border-radius:6px;padding:10px 14px;'>"
+            f"<div style='font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;'>Driver 1</div>"
+            f"<div style='font-size:13px;font-weight:700;color:#0F172A;'>{_esc(sessione.get('driver1_nome','—'))}</div>"
+            f"<div style='font-size:11px;color:#64748B;margin-top:4px;'>+ {_esc(sessione.get('driver1_pos','?'))} &nbsp;/&nbsp; − {_esc(sessione.get('driver1_neg','?'))}</div>"
+            f"</div>"
+            f"<div style='flex:1;background:#F8FAFC;border-left:4px solid #94A3B8;border-radius:6px;padding:10px 14px;'>"
+            f"<div style='font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;'>Driver 2</div>"
+            f"<div style='font-size:13px;font-weight:700;color:#0F172A;'>{_esc(sessione.get('driver2_nome','—'))}</div>"
+            f"<div style='font-size:11px;color:#64748B;margin-top:4px;'>+ {_esc(sessione.get('driver2_pos','?'))} &nbsp;/&nbsp; − {_esc(sessione.get('driver2_neg','?'))}</div>"
+            f"</div>"
+            f"</div>"
+        )
         if sessione.get("driver1_nome"):
             s.append(_build_pdf_quadrant_matrix(sessione, scenari))
         s.append("</div>")

@@ -88,7 +88,7 @@ def st_scarica_pdf_scenario_individuale(scenario_indiv, sessione, nome_partecipa
     </style>
     </head>
     <body>
-    <div style="position: absolute; left: 0; top: 0; width: 700px; background-color: white; opacity: 0.01; z-index: -10; pointer-events: none;">
+    <div style="position:fixed;left:-9999px;top:0;width:700px;background:white;">
       <div id="{unique_id}">
         {html_content}
       </div>
@@ -375,7 +375,7 @@ def st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti, partecipanti
 <style>{CSS}</style>
 </head>
 <body>
-<div style="position:absolute;left:0;top:0;width:720px;background:white;opacity:0.01;z-index:-10;pointer-events:none;">
+<div style="position:fixed;left:-9999px;top:0;width:720px;background:white;">
   {html_content}
 </div>
 <button class="btn" onclick="

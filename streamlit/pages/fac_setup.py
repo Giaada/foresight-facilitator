@@ -112,6 +112,8 @@ if not st.session_state.get("sessione_id"):
 
         if "nmod_n_fenomeni" not in st.session_state:
             st.session_state.nmod_n_fenomeni = 1
+        if "nmod_file_upload_key" not in st.session_state:
+            st.session_state.nmod_file_upload_key = 0
 
         # Applica i fenomeni importati da file PRIMA che i widget vengano renderizzati
         if "nmod_import_pending" in st.session_state:
@@ -168,7 +170,7 @@ if not st.session_state.get("sessione_id"):
         file_upload = st.file_uploader(
             "📂 Carica file .xlsx / .csv",
             type=["xlsx", "xls", "csv"],
-            key="nmod_file_upload",
+            key=f"nmod_file_upload_{st.session_state.nmod_file_upload_key}",
             help="Il file deve avere due colonne: la prima con il nome del fenomeno, la seconda con la descrizione (opzionale)."
         )
         if file_upload is not None:
@@ -185,10 +187,8 @@ if not st.session_state.get("sessione_id"):
                     if testo and testo.lower() != "nan":
                         righe.append((testo, descrizione))
                 if righe:
-                    # Salva in chiave temporanea: verrà applicata al prossimo rerun,
-                    # prima che i widget vengano renderizzati (evita il conflitto di Streamlit)
                     st.session_state.nmod_import_pending = righe
-                    st.success(f"✅ Importati {len(righe)} fenomeni dal file.")
+                    st.session_state.nmod_file_upload_key += 1  # resetta il file uploader
                     st.rerun()
                 else:
                     st.warning("Il file non contiene righe valide.")

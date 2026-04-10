@@ -101,6 +101,37 @@ def _build_history(messaggi_db, testo_utente):
     return msgs
 
 
+def _parse_json(testo_raw):
+    """Prova più strategie per estrarre un JSON dalla risposta del modello."""
+    # 1. Parse diretto
+    try:
+        return json.loads(testo_raw.strip())
+    except Exception:
+        pass
+    # 2. Regex {…} (gestisce testo prima/dopo)
+    match = re.search(r'\{.*\}', testo_raw, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group(0))
+        except Exception:
+            pass
+    # 3. Strip blocchi markdown ```json … ```
+    cleaned = re.sub(r'^```(?:json)?\s*', '', testo_raw.strip(), flags=re.MULTILINE)
+    cleaned = re.sub(r'```\s*$', '', cleaned.strip(), flags=re.MULTILINE)
+    try:
+        return json.loads(cleaned.strip())
+    except Exception:
+        pass
+    # 4. JSON dentro code block
+    match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', testo_raw, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group(1))
+        except Exception:
+            pass
+    return None
+
+
 def invia_messaggio(scenario, sessione, testo_utente):
     """Invia un messaggio e ottieni la risposta dell'agente."""
     key_points = sessione.get("key_points", [])
@@ -118,31 +149,22 @@ def invia_messaggio(scenario, sessione, testo_utente):
         )
         testo_raw = risposta.content[0].text
 
-        # Prova a parsare JSON con Regex sicura
         testo_risposta = testo_raw
         nuovo_step = None
         agg = {}
-        try:
-            match = re.search(r'\{.*\}', testo_raw, re.DOTALL)
-            if match:
-                cleaned = match.group(0)
-                parsed = json.loads(cleaned)
-                testo_risposta = parsed.get("testo") or "Risposta non decifrabile."
-                nuovo_step = parsed.get("nuovo_step")
-                agg = parsed.get("aggiornamenti") or {}
-                if not agg:
-                    agg = {
-                        "narrativa": parsed.get("narrativa"),
-                        "titolo": parsed.get("titolo"),
-                        "minacce": parsed.get("minacce", []),
-                        "opportunita": parsed.get("opportunita", []),
-                        "key_points_data": parsed.get("key_points_data", {})
-                    }
-            else:
-                testo_risposta = "Ho elaborato i dati ma c'è stato un piccolo inciampo di formato. Cosa dicevamo?"
-        except Exception:
-            # Fallback in caso di delirio LLM: restituisce almeno il parse rotto mascherato
-            testo_risposta = "Ho elaborato i dati ma c'è stato un piccolo inciampo di comunicazione testuale. Cosa dicevamo?"
+
+        parsed = _parse_json(testo_raw)
+        if parsed:
+            testo_risposta = parsed.get("testo") or testo_raw
+            nuovo_step = parsed.get("nuovo_step")
+            agg = parsed.get("aggiornamenti") or {
+                "narrativa": parsed.get("narrativa"),
+                "titolo": parsed.get("titolo"),
+                "minacce": parsed.get("minacce", []),
+                "opportunita": parsed.get("opportunita", []),
+                "key_points_data": parsed.get("key_points_data", {})
+            }
+        # Se non trova JSON usa il testo grezzo come messaggio (meglio del fallback generico)
 
         # Salva SOLO messaggio assistant (quello user l'ha già salvato la view)
         aggiungi_messaggio(scenario["id"], "assistant", testo_risposta)

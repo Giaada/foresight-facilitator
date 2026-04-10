@@ -1,6 +1,8 @@
 import streamlit as st
 import sys
 from pathlib import Path
+import pandas as pd
+import io
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -147,6 +149,45 @@ if not st.session_state.get("sessione_id"):
         if st.button("➕ Aggiungi fenomeno", key="nmod_add"):
             st.session_state.nmod_n_fenomeni += 1
             st.rerun()
+
+        file_upload = st.file_uploader(
+            "📂 Carica file .xlsx / .csv",
+            type=["xlsx", "xls", "csv"],
+            key="nmod_file_upload",
+            help="Il file deve avere due colonne: la prima con il nome del fenomeno, la seconda con la descrizione (opzionale)."
+        )
+        if file_upload is not None:
+            try:
+                if file_upload.name.endswith(".csv"):
+                    df = pd.read_csv(file_upload, header=0)
+                else:
+                    df = pd.read_excel(file_upload, header=0)
+                df = df.dropna(subset=[df.columns[0]])
+                righe = []
+                for _, row in df.iterrows():
+                    testo = str(row.iloc[0]).strip()
+                    descrizione = str(row.iloc[1]).strip() if len(row) > 1 and pd.notna(row.iloc[1]) else ""
+                    if testo and testo.lower() != "nan":
+                        righe.append((testo, descrizione))
+                if righe:
+                    # mantieni eventuali fenomeni già inseriti manualmente
+                    esistenti = []
+                    for i in range(st.session_state.nmod_n_fenomeni):
+                        t = st.session_state.get(f"nmod_t_{i}", "").strip()
+                        d = st.session_state.get(f"nmod_d_{i}", "").strip()
+                        if t:
+                            esistenti.append((t, d))
+                    tutti = esistenti + righe
+                    st.session_state.nmod_n_fenomeni = len(tutti)
+                    for i, (t, d) in enumerate(tutti):
+                        st.session_state[f"nmod_t_{i}"] = t
+                        st.session_state[f"nmod_d_{i}"] = d
+                    st.success(f"✅ Importati {len(righe)} fenomeni dal file.")
+                    st.rerun()
+                else:
+                    st.warning("Il file non contiene righe valide.")
+            except Exception as e:
+                st.error(f"Errore nel leggere il file: {e}")
 
         if st.button("Salva Modello", type="primary", use_container_width=True, key="nmod_save"):
             titolo = st.session_state.get("nmod_titolo", "").strip()

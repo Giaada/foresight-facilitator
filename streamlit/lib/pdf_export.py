@@ -182,7 +182,7 @@ def st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti, partecipanti
     CSS = """
       * { box-sizing: border-box; word-wrap: break-word; overflow-wrap: break-word; }
       body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 0; color: #1F2937; margin: 0; }
-      #pdf-body { padding: 24px 32px; }
+      #pdf-body { padding: 24px 32px; width: 720px; }
       h1 { color: #4F46E5; border-bottom: 2px solid #e0e7ff; padding-bottom: 12px; margin-bottom: 20px; font-size: 22px; }
       h2 { color: #312E81; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; margin-top: 0; margin-bottom: 16px; font-size: 17px; }
       h3 { color: #4338CA; margin-top: 18px; margin-bottom: 8px; font-size: 14px; }

@@ -178,221 +178,226 @@ def st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti, partecipanti
     else:
         fenomeni_ordinati = [(i + 1, f["testo"], None) for i, f in enumerate(fenomeni)]
 
-    # Nomi partecipanti
-    nomi_par = ""
-    if partecipanti:
-        nomi = [p.get("nome", "?") for p in partecipanti]
-        nomi_par = ", ".join(nomi)
-
-    lines = [
-        f"# Report Foresight — Sessione #{sid}",
-        f"",
-        f"**Domanda di ricerca:** {sessione['domanda_ricerca']}",
-        f"**Orizzonte temporale:** {sessione['frame_temporale']}",
-        f"**Codice sessione:** {sessione.get('codice', '—')}",
-        f"",
-    ]
-
-    if nomi_par:
-        lines += [
-            f"## Partecipanti",
-            f"{nomi_par}",
-            f"",
-        ]
-
-    lines += [
-        f"## Driver",
-        f"- **Driver 1:** {sessione.get('driver1_nome', '—')} ({sessione.get('driver1_pos', '+')} / {sessione.get('driver1_neg', '−')})",
-        f"- **Driver 2:** {sessione.get('driver2_nome', '—')} ({sessione.get('driver2_pos', '+')} / {sessione.get('driver2_neg', '−')})",
-        f"",
-    ]
-
-    # Matrice grafica 2x2 con nomi scenari
-    if scenari and sessione.get('driver1_nome'):
-        lines.append(_build_pdf_quadrant_matrix(sessione, scenari))
-        lines.append("")
-
-    lines.append(f"## Fenomeni prioritizzati")
-    for pos, testo, avg in fenomeni_ordinati:
-        avg_str = f" (avg: {avg:.1f})" if avg is not None else ""
-        lines.append(f"{pos}. {testo}{avg_str}")
-
-    lines.append("")
-    lines.append("## Indice degli Scenari")
-    lines.append("<ul class='toc'>")
-    for sc in scenari:
-        t_fin = sc.get("titolo_finale")
-        titolo_orig = sc.get("titolo") or f"Scenario {sc['numero']}"
-        titolo_disp = t_fin if t_fin else titolo_orig
-        lines.append(f"<li><a href='#scenario-{sc['numero']}'><strong>Scenario {sc['numero']}</strong>: {titolo_disp}</a></li>")
-    lines.append("</ul>")
-
-    for sc in scenari:
-        titolo_orig = sc.get("titolo") or f"Scenario {sc['numero']}"
-        t_fin = sc.get("titolo_finale")
-        n_fin = sc.get("narrativa_finale")
-        m_fin = sc.get("minacce_finale")
-        o_fin = sc.get("opportunita_finale")
-        
-        has_final = any([t_fin, n_fin, m_fin, o_fin])
-        titolo_disp = t_fin if t_fin else titolo_orig
-
-        lines += [
-            f"",
-            f"<div class='page-break'></div>",
-            f"<div class='scenario-title-box' id='scenario-{sc['numero']}'>",
-            f"  <span class='scenario-label'>Scenario {sc['numero']}</span>",
-            f"  <h2 class='scenario-name'>{titolo_disp}</h2>",
-            f"  <span class='scenario-quadrant'>Quadrante: {sc['quadrante']}</span>",
-            f"</div>",
-        ]
-        
-        if has_final:
-            lines += [
-                f"",
-                f"> **Nota Storica:** Questo scenario è stato attivamente discusso ed evoluto dai partecipanti partendo da una base AI.",
-                f"",
-                f"#### 🧠 Versione Definitiva (Consolidata dal Gruppo)"
-            ]
-            if n_fin:
-                lines += [f"", n_fin]
-            
-            if m_fin:
-                lines.append("<div class='box minacce'><h4>⚠️ Minacce</h4><ul>")
-                for m in m_fin: lines.append(f"<li>{m}</li>")
-                lines.append("</ul></div>")
-            if o_fin:
-                lines.append("<div class='box opportunita'><h4>✨ Opportunità</h4><ul>")
-                for o in o_fin: lines.append(f"<li>{o}</li>")
-                lines.append("</ul></div>")
-                
-            lines.append("")
-            lines.append("---")
-            lines.append("#### 🤖 Origine: Bozza dell'Agente per la Discussione")
-            
-        if sc.get("narrativa"):
-            lines += [f"", sc["narrativa"]]
-        if sc.get("key_points_data"):
-            kp_data = sc["key_points_data"]
-            if isinstance(kp_data, dict):
-                p_com = kp_data.get("punti_comune", [])
-                divs = kp_data.get("divergenze", [])
-                standard_kp = {k: v for k, v in kp_data.items() if k not in ("punti_comune", "divergenze")}
-                
-                if standard_kp:
-                    lines.append("")
-                    lines.append("**Key Points:**")
-                    for k, v in standard_kp.items():
-                        lines.append(f"- **{k}:** {v}")
-                
-                if p_com:
-                    lines.append("<div class='box comune'><h4>🤝 Punti in Comune</h4><ul>")
-                    for x in p_com: lines.append(f"<li>{x}</li>")
-                    lines.append("</ul></div>")
-                    
-                if divs:
-                    lines.append("<div class='box divergenze'><h4>⚡ Divergenze Emerse</h4><ul>")
-                    for x in divs: lines.append(f"<li>{x}</li>")
-                    lines.append("</ul></div>")
-        
-        if not has_final:
-            if sc.get("minacce"):
-                lines.append("<div class='box minacce'><h4>⚠️ Minacce</h4><ul>")
-                for m in sc["minacce"]:
-                    lines.append(f"<li>{m}</li>")
-                lines.append("</ul></div>")
-            if sc.get("opportunita"):
-                lines.append("<div class='box opportunita'><h4>✨ Opportunità</h4><ul>")
-                for o in sc["opportunita"]:
-                    lines.append(f"<li>{o}</li>")
-                lines.append("</ul></div>")
-
-    md = "\n".join(lines)
-    html_content = markdown.markdown(md)
-
-    pdf_html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-    <meta charset="utf-8">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <style>
-      * {{ box-sizing: border-box; word-wrap: break-word; overflow-wrap: break-word; }}
-      body {{ font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 0; color: #333; margin: 0; }}
-      #pdf-report-body {{ padding: 20px 30px; max-width: 700px; margin: 0 auto; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }}
-      #pdf-report-body h1 {{ color: #4F46E5; border-bottom: 2px solid #e0e7ff; padding-bottom: 15px; margin-bottom: 25px; page-break-after: avoid; font-size: 22px; }}
-      #pdf-report-body h2 {{ color: #312E81; margin-top: 30px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; page-break-after: avoid; font-size: 18px; }}
-      #pdf-report-body h3 {{ color: #4338CA; margin-top: 22px; margin-bottom: 10px; page-break-after: avoid; font-size: 16px; }}
-      #pdf-report-body h4 {{ color: #111827; margin-top: 18px; page-break-after: avoid; font-size: 14px; }}
-      #pdf-report-body p, #pdf-report-body li {{ line-height: 1.7; font-size: 13px; }}
-      #pdf-report-body strong {{ color: #111827; }}
-      #pdf-report-body blockquote {{ border-left: 4px solid #4F46E5; padding-left: 15px; margin-left: 0; padding-top: 5px; padding-bottom: 5px; color: #4B5563; font-style: italic; background-color: #F3F4F6; border-radius: 4px; }}
-      .page-break {{ page-break-before: always; }}
-      .box {{ padding: 12px; margin-top: 12px; margin-bottom: 12px; border-radius: 8px; border-left: 5px solid; page-break-inside: avoid; }}
-      .box h4 {{ margin-top: 0 !important; margin-bottom: 8px; font-size: 14px; padding-bottom: 5px; }}
-      .box ul {{ margin-bottom: 0; padding-left: 20px; }}
-      .box.minacce {{ background-color: #FEF2F2; border-left-color: #EF4444; }}
-      .box.minacce h4 {{ color: #991B1B !important; }}
-      .box.opportunita {{ background-color: #ECFDF5; border-left-color: #10B981; }}
-      .box.opportunita h4 {{ color: #065F46 !important; }}
-      .box.comune {{ background-color: #EFF6FF; border-left-color: #3B82F6; }}
-      .box.comune h4 {{ color: #1E3A8A !important; }}
-      .box.divergenze {{ background-color: #FEFCE8; border-left-color: #EAB308; }}
-      .box.divergenze h4 {{ color: #854D0E !important; }}
-      .scenario-title-box {{ background-color: #E0F2FE; border: 2px solid #0284C7; border-radius: 8px; padding: 15px 20px; margin-top: 20px; margin-bottom: 25px; text-align: center; page-break-after: avoid; }}
-      .scenario-label {{ display: block; font-size: 13px; font-weight: 700; color: #0369A1; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }}
-      .scenario-name {{ color: #0C4A6E !important; margin: 0 !important; padding: 0 !important; border: none !important; font-size: 22px; }}
-      .scenario-quadrant {{ display: inline-block; margin-top: 10px; background-color: #BAE6FD; color: #075985; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }}
-      .toc {{ list-style: none; padding-left: 0; margin-bottom: 30px; page-break-after: always; }}
-      .toc li {{ margin-bottom: 10px; padding: 10px; background-color: #F8FAFC; border-left: 4px solid #94A3B8; border-radius: 4px; }}
-      .toc a {{ text-decoration: none; color: #334155; font-size: 14px; display: block; }}
-      .toc a:hover {{ color: #2563EB; }}
-      .btn {{ 
-        background-color: #4F46E5; color: white; padding: 12px 24px; 
-        border-radius: 8px; border: none; cursor: pointer; 
-        font-weight: 600; font-family: 'Segoe UI', sans-serif; font-size: 15px; 
-        width: 100%; text-align: center; transition: background 0.2s;
-        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-      }}
-      .btn:hover {{ background-color: #4338CA; }}
-    </style>
-    </head>
-    <body>
-
-    <div style="position: absolute; left: 0; top: 0; width: 700px; background-color: white; opacity: 0.01; z-index: -10; pointer-events: none;">
-      <div id="pdf-report-body">
-        {html_content}
-      </div>
-    </div>
-
-    <button class="btn" onclick="
-      var btn = this;
-      var originalText = btn.innerHTML;
-      btn.innerHTML = '⚙️ Generazione PDF in corso...';
-      btn.style.backgroundColor = '#6B7280';
-      
-      var element = document.getElementById('pdf-report-body');
-      
-      var opt = {{
-        margin: [15, 20, 15, 20],
-        filename: 'Report_Scenario_Planning_#{sid}.pdf',
-        image: {{ type: 'jpeg', quality: 0.98 }},
-        html2canvas: {{ scale: 2, useCORS: true, windowWidth: 700, windowHeight: window.innerHeight, x: 0, y: 0, scrollX: 0, scrollY: 0 }},
-        jsPDF: {{ unit: 'mm', format: 'a4', orientation: 'portrait' }},
-        pagebreak: {{ mode: ['avoid-all', 'css', 'legacy'] }},
-        enableLinks: true
-      }};
-      
-      html2pdf().set(opt).from(element).save().then(function() {{
-        btn.innerHTML = originalText;
-        btn.style.backgroundColor = '#4F46E5';
-      }});
-    ">
-      📥 Scarica Report Finale in PDF Reale
-    </button>
-    </body>
-    </html>
+    # ── CSS comune ────────────────────────────────────────────
+    CSS = """
+      * { box-sizing: border-box; word-wrap: break-word; overflow-wrap: break-word; }
+      body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 0; color: #1F2937; margin: 0; }
+      #pdf-body { padding: 24px 32px; max-width: 720px; margin: 0 auto; }
+      h1 { color: #4F46E5; border-bottom: 2px solid #e0e7ff; padding-bottom: 12px; margin-bottom: 20px; font-size: 22px; }
+      h2 { color: #312E81; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; margin-top: 0; margin-bottom: 16px; font-size: 17px; }
+      h3 { color: #4338CA; margin-top: 18px; margin-bottom: 8px; font-size: 14px; }
+      p, li { line-height: 1.7; font-size: 13px; }
+      strong { color: #111827; }
+      blockquote { border-left: 4px solid #4F46E5; padding: 6px 14px; margin-left: 0;
+                   color: #4B5563; font-style: italic; background: #F3F4F6; border-radius: 4px; }
+      .section { page-break-before: always; padding-top: 8px; }
+      .section:first-of-type { page-break-before: avoid; }
+      .box { padding: 12px 14px; margin: 10px 0; border-radius: 8px; border-left: 5px solid; page-break-inside: avoid; }
+      .box h3 { margin-top: 0; margin-bottom: 8px; font-size: 13px; }
+      .box ul { margin: 0; padding-left: 18px; }
+      .box.minacce   { background: #FEF2F2; border-color: #EF4444; }
+      .box.minacce h3   { color: #991B1B; }
+      .box.opportunita { background: #ECFDF5; border-color: #10B981; }
+      .box.opportunita h3 { color: #065F46; }
+      .box.comune    { background: #EFF6FF; border-color: #3B82F6; }
+      .box.comune h3    { color: #1E3A8A; }
+      .box.divergenze { background: #FEFCE8; border-color: #EAB308; }
+      .box.divergenze h3 { color: #854D0E; }
+      .sc-header { background: #E0F2FE; border: 2px solid #0284C7; border-radius: 8px;
+                   padding: 14px 20px; margin-bottom: 20px; text-align: center; page-break-after: avoid; }
+      .sc-label  { display: block; font-size: 11px; font-weight: 700; color: #0369A1;
+                   text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+      .sc-title  { color: #0C4A6E; font-size: 20px; font-weight: 800; margin: 0; }
+      .sc-quad   { display: inline-block; margin-top: 8px; background: #BAE6FD; color: #075985;
+                   padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+      .toc-item  { display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+                   background: #F8FAFC; border-left: 4px solid #94A3B8; border-radius: 4px;
+                   margin-bottom: 8px; page-break-inside: avoid; }
+      .toc-num   { min-width: 28px; height: 28px; border-radius: 50%; background: #4F46E5;
+                   color: white; font-weight: 700; font-size: 12px;
+                   display: flex; align-items: center; justify-content: center; }
+      .toc-text  { font-size: 13px; color: #334155; }
+      .toc-text strong { color: #1e1b4b; }
+      .meta-row  { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 6px; }
+      .meta-item { font-size: 13px; }
+      .meta-label { color: #6B7280; font-size: 11px; text-transform: uppercase;
+                    letter-spacing: 0.05em; font-weight: 600; }
+      .rank-row  { display: flex; align-items: center; gap: 8px; padding: 5px 0;
+                   border-bottom: 1px solid #F3F4F6; }
+      .rank-num  { min-width: 22px; height: 22px; border-radius: 50%; color: white;
+                   font-size: 10px; font-weight: 700;
+                   display: flex; align-items: center; justify-content: center; }
+      .rank-text { font-size: 12px; color: #374151; flex: 1; }
+      .rank-avg  { font-size: 11px; color: #9CA3AF; }
+      .divider   { border: none; border-top: 1px solid #E5E7EB; margin: 16px 0; }
+      .btn { background: #4F46E5; color: white; padding: 12px 24px; border-radius: 8px;
+             border: none; cursor: pointer; font-weight: 600; font-size: 15px;
+             width: 100%; text-align: center; font-family: 'Segoe UI', sans-serif; }
+      .btn:hover { background: #4338CA; }
     """
 
+    # ── Costruisce HTML direttamente ──────────────────────────
+    s = []
+
+    # — Copertina —
+    s.append("<div id='pdf-body'>")
+    s.append(f"<h1>📊 Report Foresight — Sessione #{sid}</h1>")
+    s.append("<div class='meta-row'>")
+    s.append(f"<div class='meta-item'><div class='meta-label'>Domanda di ricerca</div>{_esc(sessione['domanda_ricerca'])}</div>")
+    s.append("</div>")
+    s.append("<div class='meta-row'>")
+    s.append(f"<div class='meta-item'><div class='meta-label'>Orizzonte temporale</div>{_esc(sessione.get('frame_temporale','—'))}</div>")
+    s.append(f"<div class='meta-item'><div class='meta-label'>Codice sessione</div><code>{_esc(sessione.get('codice','—'))}</code></div>")
+    s.append(f"<div class='meta-item'><div class='meta-label'>Stato</div>{_esc(sessione.get('stato','—'))}</div>")
+    s.append("</div>")
+
+    # — Partecipanti —
+    if partecipanti:
+        s.append("<div class='section'>")
+        s.append("<h2>👥 Partecipanti</h2>")
+        nomi = ", ".join(_esc(p.get("nome", "?")) for p in partecipanti)
+        s.append(f"<p>{nomi}</p>")
+        s.append("</div>")
+
+    # — Driver —
+    if sessione.get("driver1_nome") or sessione.get("driver2_nome"):
+        s.append("<div class='section'>")
+        s.append("<h2>🔀 Driver degli Scenari</h2>")
+        s.append("<ul>")
+        s.append(f"<li><strong>Driver 1:</strong> {_esc(sessione.get('driver1_nome','—'))} "
+                 f"(+: {_esc(sessione.get('driver1_pos','?'))} / −: {_esc(sessione.get('driver1_neg','?'))})</li>")
+        s.append(f"<li><strong>Driver 2:</strong> {_esc(sessione.get('driver2_nome','—'))} "
+                 f"(+: {_esc(sessione.get('driver2_pos','?'))} / −: {_esc(sessione.get('driver2_neg','?'))})</li>")
+        s.append("</ul>")
+        if sessione.get("driver1_nome"):
+            s.append(_build_pdf_quadrant_matrix(sessione, scenari))
+        s.append("</div>")
+
+    # — Fenomeni prioritizzati —
+    s.append("<div class='section'>")
+    s.append("<h2>📋 Fenomeni prioritizzati</h2>")
+    COLORI_RANK = ["#7C3AED", "#2563EB", "#0D9488", "#9CA3AF"]
+    n_fen = len(fenomeni_ordinati)
+    for pos, testo, avg in fenomeni_ordinati:
+        tier = min(int((pos - 1) / n_fen * 4), 3) if n_fen else 0
+        colore = COLORI_RANK[tier]
+        avg_str = f"<span class='rank-avg'>media {avg:.1f}</span>" if avg is not None else ""
+        s.append(
+            f"<div class='rank-row'>"
+            f"<div class='rank-num' style='background:{colore}'>{pos}</div>"
+            f"<div class='rank-text'>{_esc(testo)}</div>"
+            f"{avg_str}"
+            f"</div>"
+        )
+    s.append("</div>")
+
+    # — Indice scenari —
+    if scenari:
+        s.append("<div class='section'>")
+        s.append("<h2>📑 Indice degli Scenari</h2>")
+        for sc in scenari:
+            titolo_disp = sc.get("titolo_finale") or sc.get("titolo") or f"Scenario {sc['numero']}"
+            s.append(
+                f"<div class='toc-item'>"
+                f"<div class='toc-num'>{sc['numero']}</div>"
+                f"<div class='toc-text'><strong>Scenario {sc['numero']}</strong> — {_esc(titolo_disp)}"
+                f"<br><small style='color:#6B7280'>Quadrante: {_esc(sc.get('quadrante',''))}</small></div>"
+                f"</div>"
+            )
+        s.append("</div>")
+
+    # — Scenari —
+    for sc in scenari:
+        titolo_disp = sc.get("titolo_finale") or sc.get("titolo") or f"Scenario {sc['numero']}"
+        t_fin = sc.get("titolo_finale")
+        n_fin = sc.get("narrativa_finale")
+        m_fin = sc.get("minacce_finale") or []
+        o_fin = sc.get("opportunita_finale") or []
+        has_final = any([t_fin, n_fin, m_fin, o_fin])
+
+        s.append(f"<div class='section'>")
+        s.append(
+            f"<div class='sc-header'>"
+            f"<span class='sc-label'>Scenario {sc['numero']}</span>"
+            f"<div class='sc-title'>{_esc(titolo_disp)}</div>"
+            f"<span class='sc-quad'>Quadrante: {_esc(sc.get('quadrante',''))}</span>"
+            f"</div>"
+        )
+
+        if has_final:
+            s.append("<blockquote>Questo scenario è stato discusso ed evoluto dal gruppo partendo da una bozza AI.</blockquote>")
+            s.append("<h3>🧠 Versione Definitiva</h3>")
+            if n_fin:
+                s.append(f"<p>{_esc(n_fin).replace(chr(10), '<br>')}</p>")
+            if m_fin:
+                items = "".join(f"<li>{_esc(m)}</li>" for m in m_fin)
+                s.append(f"<div class='box minacce'><h3>⚠️ Minacce</h3><ul>{items}</ul></div>")
+            if o_fin:
+                items = "".join(f"<li>{_esc(o)}</li>" for o in o_fin)
+                s.append(f"<div class='box opportunita'><h3>✨ Opportunità</h3><ul>{items}</ul></div>")
+            s.append("<hr class='divider'>")
+            s.append("<h3>🤖 Bozza dell'Agente</h3>")
+
+        if sc.get("narrativa"):
+            s.append(f"<p>{_esc(sc['narrativa']).replace(chr(10), '<br>')}</p>")
+
+        if sc.get("key_points_data") and isinstance(sc["key_points_data"], dict):
+            kp = sc["key_points_data"]
+            std = {k: v for k, v in kp.items() if k not in ("punti_comune", "divergenze")}
+            if std:
+                items = "".join(f"<li><strong>{_esc(k)}:</strong> {_esc(v)}</li>" for k, v in std.items())
+                s.append(f"<h3>🎯 Key Points</h3><ul>{items}</ul>")
+            if kp.get("punti_comune"):
+                items = "".join(f"<li>{_esc(x)}</li>" for x in kp["punti_comune"])
+                s.append(f"<div class='box comune'><h3>🤝 Punti in Comune</h3><ul>{items}</ul></div>")
+            if kp.get("divergenze"):
+                items = "".join(f"<li>{_esc(x)}</li>" for x in kp["divergenze"])
+                s.append(f"<div class='box divergenze'><h3>⚡ Divergenze</h3><ul>{items}</ul></div>")
+
+        if not has_final:
+            if sc.get("minacce"):
+                items = "".join(f"<li>{_esc(m)}</li>" for m in sc["minacce"])
+                s.append(f"<div class='box minacce'><h3>⚠️ Minacce</h3><ul>{items}</ul></div>")
+            if sc.get("opportunita"):
+                items = "".join(f"<li>{_esc(o)}</li>" for o in sc["opportunita"])
+                s.append(f"<div class='box opportunita'><h3>✨ Opportunità</h3><ul>{items}</ul></div>")
+
+        s.append("</div>")  # .section
+
+    s.append("</div>")  # #pdf-body
+    html_content = "\n".join(s)
+
+    pdf_html = f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>{CSS}</style>
+</head>
+<body>
+<div style="position:absolute;left:0;top:0;width:720px;background:white;opacity:0.01;z-index:-10;pointer-events:none;">
+  {html_content}
+</div>
+<button class="btn" onclick="
+  var btn=this;
+  btn.innerHTML='⚙️ Generazione in corso...';
+  btn.style.background='#6B7280';
+  var el=document.getElementById('pdf-body');
+  var opt={{
+    margin:[15,18,15,18],
+    filename:'Report_Foresight_{sid}.pdf',
+    image:{{type:'jpeg',quality:0.98}},
+    html2canvas:{{scale:2,useCORS:true,windowWidth:720,scrollX:0,scrollY:0}},
+    jsPDF:{{unit:'mm',format:'a4',orientation:'portrait'}},
+    pagebreak:{{mode:['css','legacy']}}
+  }};
+  html2pdf().set(opt).from(el).save().then(function(){{
+    btn.innerHTML='📥 Scarica Report Finale in PDF';
+    btn.style.background='#4F46E5';
+  }});
+">📥 Scarica Report Finale in PDF</button>
+</body>
+</html>"""
+
     components.html(pdf_html, height=65)
-    return md
+    return html_content

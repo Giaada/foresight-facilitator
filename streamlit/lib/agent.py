@@ -172,13 +172,20 @@ def invia_messaggio(scenario, sessione, testo_utente):
         msg = "⚠️ Chiave API Anthropic non valida o non configurata. Contatta il facilitatore."
         aggiungi_messaggio(scenario["id"], "assistant", msg)
         return msg, None
+    except anthropic.RateLimitError:
+        msg = "⚠️ Limite di richieste API raggiunto. Attendi qualche secondo e riprova."
+        aggiungi_messaggio(scenario["id"], "assistant", msg)
+        return msg, None
     except anthropic.APIConnectionError:
         msg = "⚠️ Impossibile connettersi all'API. Verifica la connessione internet."
         aggiungi_messaggio(scenario["id"], "assistant", msg)
         return msg, None
+    except anthropic.APIStatusError as e:
+        msg = f"⚠️ Errore API ({e.status_code}): {str(e.message)[:200]}"
+        aggiungi_messaggio(scenario["id"], "assistant", msg)
+        return msg, None
     except Exception as e:
-        print(f"Errore dell'agente: {e}")
-        msg = "⚠️ Si è verificato un errore di connessione con l'Agente AI. Assicurati che l'API sia attiva o riprova a inviare il messaggio."
+        msg = f"⚠️ Errore imprevisto ({type(e).__name__}): {str(e)[:300]}"
         aggiungi_messaggio(scenario["id"], "assistant", msg)
         return msg, None
 

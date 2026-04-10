@@ -228,7 +228,8 @@ if not st.session_state.get("sessione_id"):
                 mc1, mc2 = st.columns([5, 1])
                 with mc1:
                     st.markdown(f"**{m['nome']}**")
-                    st.caption(f"{m['domanda_ricerca'][:70]}... | 🕐 {m['frame_temporale']}")
+                    n_fen_mod = len([l for l in m.get("fenomeni_raw", "").splitlines() if l.strip()])
+                    st.caption(f"{m['domanda_ricerca'][:70]}... | 🕐 {m['frame_temporale']} | 📋 {n_fen_mod} fenomeni")
                 with mc2:
                     if st.button("Elimina", key=f"del_mod_{m['id']}", help="Elimina in modo definitivo"):
                         elimina_modello(m['id'])

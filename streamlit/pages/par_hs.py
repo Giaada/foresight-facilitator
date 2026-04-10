@@ -121,8 +121,10 @@ fenomeni_map = {fmt_fen(f): f for f in fenomeni}
 fenomeni_testi = list(fenomeni_map.keys())
 fenomeni_set = set(fenomeni_testi)
 
-# Inizializza ranking in session state se non presente
-if "ranking_items" not in st.session_state:
+# Inizializza ranking in session state se non presente o se non ha overlap
+# con i fenomeni della sessione corrente (es. sessione diversa dalla precedente)
+existing_items = st.session_state.get("ranking_items", [])
+if not existing_items or not set(existing_items) & fenomeni_set:
     st.session_state["ranking_items"] = fenomeni_testi[:]
 
 if SORTABLE:

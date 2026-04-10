@@ -6,7 +6,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from lib.database import (
     get_sessione_by_id, get_fenomeni, get_partecipanti,
-    aggiungi_fenomeno, salva_voti
+    aggiungi_fenomeno, salva_voti, get_voti_aggregati
 )
 
 # ── Leggi partecipante dalla session ─────────────────────
@@ -84,14 +84,61 @@ if par_db and par_db.get("votato"):
     else:
         st.markdown("Grazie per aver partecipato alla fase di Horizon Scanning.")
         st.markdown("Attendi le istruzioni del facilitatore per la prossima fase.")
-        # Auto-refresh ogni 10s per rilevare quando il facilitatore avanza
-        @st.fragment(run_every=10)
-        def _attendi_avanzamento():
+
+        # ── Classifica aggregata ──────────────────────────────
+        @st.fragment(run_every=15)
+        def _mostra_classifica():
+            voti = get_voti_aggregati(sessione_id)
+            fenomeni_map = {f["id"]: f for f in get_fenomeni(sessione_id)}
+            partecipanti_db2 = get_partecipanti(sessione_id)
+            n_votanti = sum(1 for p in partecipanti_db2 if p.get("votato"))
+            n_totale = len(partecipanti_db2)
+
+            st.divider()
+            st.markdown(f"### 📊 Classifica aggregata")
+            st.caption(f"Basata sui voti di {n_votanti} / {n_totale} partecipanti · si aggiorna automaticamente")
+
+            if not voti:
+                st.info("Nessun voto ancora registrato.")
+                return
+
+            COLORI = [
+                ("#7C3AED", "#F5F3FF"),  # viola   — top 25%
+                ("#2563EB", "#EFF6FF"),  # blu     — 25-50%
+                ("#0D9488", "#ECFDF5"),  # teal    — 50-75%
+                ("#9CA3AF", "#F9FAFB"),  # grigio  — bottom 25%
+            ]
+
+            n = len(voti)
+            for i, v in enumerate(voti):
+                tier = min(int(i / n * 4), 3)
+                colore, sfondo = COLORI[tier]
+                f_obj = fenomeni_map.get(v["fenomeno_id"], {})
+                nome = f_obj.get("testo", f"Fenomeno #{v['fenomeno_id']}")
+                desc = f_obj.get("descrizione", "")
+                st.markdown(
+                    f"""<div style="display:flex;align-items:center;gap:10px;
+                        background:{sfondo};border-left:4px solid {colore};
+                        border-radius:8px;padding:8px 12px;margin-bottom:6px;">
+                        <span style="min-width:26px;height:26px;border-radius:50%;
+                            background:{colore};color:white;font-weight:700;
+                            font-size:12px;display:flex;align-items:center;
+                            justify-content:center;">{i+1}</span>
+                        <div>
+                            <div style="font-weight:600;font-size:13px;color:#111827">{nome}</div>
+                            {"<div style='font-size:11px;color:#6B7280;margin-top:2px'>" + desc + "</div>" if desc else ""}
+                        </div>
+                    </div>""",
+                    unsafe_allow_html=True,
+                )
+
+            # Auto-avanzamento a scenario planning
             s = get_sessione_by_id(sessione_id)
             if s and s.get("stato") in ("scenario_planning", "concluso"):
                 st.rerun(scope="app")
-        _attendi_avanzamento()
-        if st.button("🔄 Aggiorna stato sessione"):
+
+        _mostra_classifica()
+        if st.button("🔄 Aggiorna"):
             st.rerun()
     st.stop()
 

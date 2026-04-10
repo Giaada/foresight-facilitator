@@ -105,14 +105,9 @@ if not fenomeni:
     st.stop()
 
 st.subheader("📊 Ordina i fenomeni per rilevanza")
-st.caption("Trascina i fenomeni per ordinarli dal più rilevante (in cima) al meno rilevante (in fondo) rispetto alla domanda di ricerca.")
+st.caption("Trascina le carte per ordinarle dal più rilevante (in alto a sinistra) al meno rilevante.")
 
-# ── Drag & drop con streamlit-sortables ──────────────────
-try:
-    from streamlit_sortables import sort_items
-    SORTABLE = True
-except ImportError:
-    SORTABLE = False
+from lib.sortable_grid import sortable_grid
 
 def fmt_fen(f):
     return f["testo"]
@@ -121,72 +116,37 @@ fenomeni_map = {fmt_fen(f): f for f in fenomeni}
 fenomeni_testi = list(fenomeni_map.keys())
 fenomeni_set = set(fenomeni_testi)
 
-# Inizializza ranking in session state se non presente o se non ha overlap
-# con i fenomeni della sessione corrente (es. sessione diversa dalla precedente)
+# Inizializza o resetta ranking se la sessione è cambiata
 existing_items = st.session_state.get("ranking_items", [])
 if not existing_items or not set(existing_items) & fenomeni_set:
     st.session_state["ranking_items"] = fenomeni_testi[:]
 
-if SORTABLE:
-    # Chiave include la lunghezza così il componente si re-inizializza quando cambia la lista
-    sort_key = f"sort_par_hs_{len(fenomeni_testi)}"
+# Sincronizza: aggiungi fenomeni nuovi, rimuovi quelli eliminati
+current = st.session_state["ranking_items"]
+current = [t for t in current if t in fenomeni_set]
+for t in fenomeni_testi:
+    if t not in current:
+        current.append(t)
+st.session_state["ranking_items"] = current
 
-    sorted_items = sort_items(
-        st.session_state["ranking_items"],
-        direction="vertical",
-        key=sort_key,
-    )
+# Costruisci items per il componente nell'ordine corrente
+items_for_grid = [
+    {"testo": t, "descrizione": (fenomeni_map.get(t) or {}).get("descrizione") or ""}
+    for t in st.session_state["ranking_items"]
+]
 
-    # ── Sincronizza DOPO sort_items: aggiunge nuovi fenomeni che
-    #    il componente non conosce ancora (es. appena aggiunti al DB)
-    sorted_set = set(sorted_items)
-    for testo in fenomeni_testi:
-        if testo not in sorted_set:
-            sorted_items = sorted_items + [testo]
-    # Rimuovi fenomeni eliminati dal DB
-    sorted_items = [t for t in sorted_items if t in fenomeni_set]
+new_order = sortable_grid(items_for_grid, key="hs_grid")
 
-    st.session_state["ranking_items"] = sorted_items
+if new_order is not None:
+    # Applica il nuovo ordine mantenendo eventuali fenomeni non ancora nel componente
+    new_set = set(new_order)
+    for t in fenomeni_testi:
+        if t not in new_set:
+            new_order = list(new_order) + [t]
+    new_order = [t for t in new_order if t in fenomeni_set]
+    st.session_state["ranking_items"] = new_order
 
-    st.markdown("**Ordine attuale (1 = più rilevante):**")
-    st.caption("Passa il cursore sul testo dei fenomeni per leggerne la descrizione completa (se presente).")
-    for i, testo in enumerate(sorted_items):
-        col_n, col_t = st.columns([1, 8])
-        with col_n:
-            color = "#4F46E5" if i < 3 else "#9CA3AF"
-            st.markdown(
-                f"<span style='color:{color};font-weight:bold;font-size:1.1em'>{i+1}</span>",
-                unsafe_allow_html=True,
-            )
-        with col_t:
-            f_obj = fenomeni_map.get(testo)
-            desc = f_obj.get("descrizione") if f_obj else None
-            st.markdown(f"{'**' if i < 3 else ''}{testo}{'**' if i < 3 else ''}", help=desc if desc else None)
-
-    ranking_finale = sorted_items
-
-else:
-    st.info("💡 Drag & drop non disponibile. Usa i numeri per assegnare la priorità (1 = più rilevante).")
-    st.caption("Passa il cursore sul nome del fenomeno per leggerne la descrizione.")
-    nuovi_ordini = {}
-    for f in fenomeni:
-        col_ip, col_name = st.columns([1, 4])
-        with col_ip:
-            nuovi_ordini[f["id"]] = st.number_input(
-                "Pos",
-                min_value=1,
-                max_value=len(fenomeni),
-                value=fenomeni.index(f) + 1,
-                key=f"prio_par_{f['id']}",
-                label_visibility="collapsed"
-            )
-        with col_name:
-            st.markdown(f"**{fmt_fen(f)}**", help=f.get('descrizione') if f.get('descrizione') else None)
-    ordinato = sorted(nuovi_ordini.items(), key=lambda x: x[1])
-    ranking_finale = [
-        next(fmt_fen(f) for f in fenomeni if f["id"] == fid)
-        for fid, _ in ordinato
-    ]
+ranking_finale = st.session_state["ranking_items"]
 
 st.divider()
 

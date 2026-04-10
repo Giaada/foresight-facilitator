@@ -182,7 +182,7 @@ def st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti, partecipanti
     CSS = """
       * { box-sizing: border-box; word-wrap: break-word; overflow-wrap: break-word; }
       body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 0; color: #1F2937; margin: 0; }
-      #pdf-body { padding: 24px 32px; max-width: 680px; margin: 0 auto; }
+      #pdf-body { padding: 20px 30px; max-width: 700px; margin: 0 auto; }
       h1 { color: #4F46E5; border-bottom: 2px solid #e0e7ff; padding-bottom: 12px; margin-bottom: 20px; font-size: 22px; }
       h2 { color: #312E81; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; margin-top: 0; margin-bottom: 16px; font-size: 17px; }
       h3 { color: #4338CA; margin-top: 18px; margin-bottom: 8px; font-size: 14px; }
@@ -375,24 +375,25 @@ def st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti, partecipanti
 <style>{CSS}</style>
 </head>
 <body>
-<div style="position:absolute;left:0;top:0;width:720px;background:white;opacity:0.01;z-index:-10;pointer-events:none;">
+<div style="position:fixed;left:-9999px;top:0;width:700px;background:white;">
   {html_content}
 </div>
 <button class="btn" onclick="
   var btn=this;
+  var originalText=btn.innerHTML;
   btn.innerHTML='⚙️ Generazione in corso...';
   btn.style.background='#6B7280';
   var el=document.getElementById('pdf-body');
   var opt={{
-    margin:[15,18,15,18],
+    margin:[15,20,15,20],
     filename:'Report_Foresight_{sid}.pdf',
     image:{{type:'jpeg',quality:0.98}},
-    html2canvas:{{scale:2,useCORS:true,windowWidth:720,scrollX:0,scrollY:0}},
+    html2canvas:{{scale:2,useCORS:true,windowWidth:700,x:0,y:0,scrollX:0,scrollY:0}},
     jsPDF:{{unit:'mm',format:'a4',orientation:'portrait'}},
     pagebreak:{{mode:['css','legacy']}}
   }};
   html2pdf().set(opt).from(el).save().then(function(){{
-    btn.innerHTML='📥 Scarica Report Finale in PDF';
+    btn.innerHTML=originalText;
     btn.style.background='#4F46E5';
   }});
 ">📥 Scarica Report Finale in PDF</button>

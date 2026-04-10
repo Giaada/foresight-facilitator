@@ -111,7 +111,7 @@ def invia_messaggio(scenario, sessione, testo_utente):
 
     try:
         risposta = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
+            model="claude-sonnet-4-6",
             max_tokens=1024,
             system=sistema_prompt(scenario, sessione, key_points),
             messages=history,
@@ -217,7 +217,7 @@ Rispondi SOLO con il testo del messaggio, in italiano."""
 
     try:
         risposta = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
+            model="claude-sonnet-4-6",
             max_tokens=512,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -286,7 +286,7 @@ Rispondi SOLO con un JSON con la seguente struttura:
 
     try:
         risposta = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
+            model="claude-sonnet-4-6",
             max_tokens=2000,
             system="Sei un facilitatore imparziale capace di fare eccellenti sintesi analitiche. Rispondi SEMPRE E SOLO con un JSON valido.",
             messages=[{"role": "user", "content": prompt}]

@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 import pandas as pd
 import io
+import json
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -10,8 +11,48 @@ from lib.auth import check_facilitatore
 from lib.database import (
     get_sessione_by_id, aggiorna_sessione, get_fenomeni,
     aggiungi_fenomeno, elimina_fenomeno, aggiorna_fenomeno, crea_sessione, lista_sessioni,
-    elimina_sessione, get_modelli, crea_modello, elimina_modello, get_tutti_fenomeni_unici
+    elimina_sessione, get_modelli, crea_modello, elimina_modello, get_tutti_fenomeni_unici,
+    get_partecipanti, get_voti_aggregati, get_scenari, get_scenari_individuali, get_messaggi
 )
+
+
+def esporta_sessione_json(sid):
+    """Raccoglie tutti i dati di una sessione e li restituisce come stringa JSON."""
+    sessione = get_sessione_by_id(sid)
+    if not sessione:
+        return None
+    fenomeni = get_fenomeni(sid)
+    partecipanti = get_partecipanti(sid)
+    voti_aggregati = get_voti_aggregati(sid)
+    scenari = get_scenari(sid)
+    scenari_individuali = get_scenari_individuali(sid)
+
+    # Aggiungi messaggi per ogni scenario individuale
+    for s in scenari_individuali:
+        s["messaggi"] = get_messaggi(s["id"])
+    for s in scenari:
+        s["messaggi"] = get_messaggi(s["id"])
+
+    # Mappa fenomeno_id → testo per i voti aggregati
+    fen_map = {f["id"]: f["testo"] for f in fenomeni}
+    voti_leggibili = [
+        {
+            "fenomeno": fen_map.get(v["fenomeno_id"], f"#{v['fenomeno_id']}"),
+            "media_posizione": round(float(v["media_posizione"]), 2),
+            "n_voti": v["conteggio"],
+        }
+        for v in (voti_aggregati or [])
+    ]
+
+    export = {
+        "sessione": dict(sessione),
+        "fenomeni": [dict(f) for f in fenomeni],
+        "partecipanti": [dict(p) for p in partecipanti],
+        "ranking_aggregato": voti_leggibili,
+        "scenari_gruppo": [dict(s) for s in scenari],
+        "scenari_individuali": [dict(s) for s in scenari_individuali],
+    }
+    return json.dumps(export, ensure_ascii=False, indent=2, default=str)
 
 check_facilitatore()
 
@@ -22,11 +63,12 @@ if not st.session_state.get("sessione_id"):
     st.markdown("Crea una nuova sessione oppure apri una sessione esistente.")
     st.divider()
 
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "➕ Nuova Sessione", 
-        "📋 Carica Modello", 
-        "💾 Gestione Modelli", 
-        "📂 Sessioni Esistenti"
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "➕ Nuova Sessione",
+        "📋 Carica Modello",
+        "💾 Gestione Modelli",
+        "📂 Sessioni Esistenti",
+        "🔍 Visualizza da JSON",
     ])
 
     # ── Nuova sessione manuale ───────────────────────────
@@ -252,7 +294,7 @@ if not st.session_state.get("sessione_id"):
             for s in sessioni:
                 emoji = STATO_EMOJI.get(s["stato"], "•")
                 with st.container(border=True):
-                    col_a, col_b, col_c = st.columns([3, 1, 1])
+                    col_a, col_b, col_c, col_d = st.columns([3, 1, 1, 1])
                     with col_a:
                         codice_str = f" · `{s['codice']}`" if s.get("codice") else ""
                         st.markdown(f"**#{s['id']}**{codice_str} {emoji} `{s['stato']}`")
@@ -263,6 +305,18 @@ if not st.session_state.get("sessione_id"):
                             st.session_state["sessione_id"] = s["id"]
                             st.rerun()
                     with col_c:
+                        json_str = esporta_sessione_json(s["id"])
+                        if json_str:
+                            nome_file = f"sessione_{s['id']}_{s.get('codice','')}.json"
+                            st.download_button(
+                                "📥 JSON",
+                                data=json_str,
+                                file_name=nome_file,
+                                mime="application/json",
+                                key=f"exp_{s['id']}",
+                                use_container_width=True,
+                            )
+                    with col_d:
                         if st.button("🗑️", key=f"del_sess_{s['id']}", use_container_width=True, help="Elimina sessione e tutti i dati"):
                             st.session_state[f"confirm_del_{s['id']}"] = True
                             st.rerun()
@@ -280,6 +334,109 @@ if not st.session_state.get("sessione_id"):
                         if st.button("Annulla", key=f"no_del_{s['id']}", use_container_width=True):
                             st.session_state.pop(f"confirm_del_{s['id']}", None)
                             st.rerun()
+    # ── Visualizza da JSON ────────────────────────────────
+    with tab5:
+        st.subheader("🔍 Visualizza sessione da file JSON")
+        st.caption("Carica un file JSON esportato per consultare i risultati in sola lettura.")
+
+        uploaded = st.file_uploader("Carica file JSON", type=["json"], key="json_viewer_upload")
+        if uploaded:
+            try:
+                dati = json.loads(uploaded.read())
+            except Exception as e:
+                st.error(f"File JSON non valido: {e}")
+                dati = None
+
+            if dati:
+                sess = dati.get("sessione", {})
+                st.markdown(f"## 📋 {sess.get('domanda_ricerca', '—')}")
+                st.markdown(f"**Orizzonte:** {sess.get('frame_temporale', '—')} · **Stato:** `{sess.get('stato', '—')}` · **Codice:** `{sess.get('codice', '—')}`")
+
+                kp = sess.get("key_points", [])
+                if isinstance(kp, str):
+                    try: kp = json.loads(kp)
+                    except: kp = []
+                if kp:
+                    st.markdown("**Key Points:** " + " · ".join(f"`{k}`" for k in kp))
+
+                st.divider()
+
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    fenomeni = dati.get("fenomeni", [])
+                    st.markdown(f"### 📋 Fenomeni ({len(fenomeni)})")
+                    for f in fenomeni:
+                        st.markdown(f"**{f['testo']}**")
+                        if f.get("descrizione"):
+                            st.caption(f["descrizione"])
+
+                with col2:
+                    ranking = dati.get("ranking_aggregato", [])
+                    st.markdown(f"### 📊 Ranking Aggregato ({len(ranking)} fenomeni votati)")
+                    COLORI = ["#7C3AED","#2563EB","#0D9488","#9CA3AF"]
+                    n = len(ranking)
+                    for i, v in enumerate(ranking):
+                        tier = min(int(i / n * 4), 3) if n else 0
+                        colore = COLORI[tier]
+                        st.markdown(
+                            f"<div style='display:flex;gap:8px;align-items:center;margin-bottom:4px'>"
+                            f"<span style='background:{colore};color:white;border-radius:50%;width:22px;height:22px;"
+                            f"display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700'>{i+1}</span>"
+                            f"<span style='font-size:13px'>{v['fenomeno']}</span>"
+                            f"<span style='font-size:11px;color:#9CA3AF;margin-left:auto'>media {v['media_posizione']} · {v['n_voti']} voti</span>"
+                            f"</div>",
+                            unsafe_allow_html=True
+                        )
+
+                st.divider()
+
+                # Partecipanti
+                partecipanti = dati.get("partecipanti", [])
+                st.markdown(f"### 👥 Partecipanti ({len(partecipanti)})")
+                votanti = sum(1 for p in partecipanti if p.get("votato"))
+                st.caption(f"{votanti} su {len(partecipanti)} hanno votato")
+                st.dataframe(
+                    [{"Nome": p["nome"], "Votato": "✅" if p.get("votato") else "⏳"} for p in partecipanti],
+                    use_container_width=True, hide_index=True
+                )
+
+                # Scenari
+                scenari = dati.get("scenari_gruppo", [])
+                sc_ind = dati.get("scenari_individuali", [])
+                if scenari or sc_ind:
+                    st.divider()
+                    st.markdown(f"### 🗺️ Scenari")
+
+                    if scenari:
+                        st.markdown("**Scenari di gruppo:**")
+                        for s in scenari:
+                            with st.expander(f"Scenario {s.get('numero')} · `{s.get('quadrante')}` — {s.get('titolo') or 'senza titolo'}"):
+                                if s.get("narrativa"):
+                                    st.markdown(s["narrativa"])
+                                c1, c2 = st.columns(2)
+                                with c1:
+                                    if s.get("minacce"):
+                                        st.markdown("**⚠️ Minacce:**\n" + "\n".join(f"- {m}" for m in s["minacce"]))
+                                with c2:
+                                    if s.get("opportunita"):
+                                        st.markdown("**✨ Opportunità:**\n" + "\n".join(f"- {o}" for o in s["opportunita"]))
+
+                    if sc_ind:
+                        st.markdown("**Scenari individuali:**")
+                        for s in sc_ind:
+                            label = f"Scenario {s.get('numero')} · {s.get('titolo') or 'senza titolo'}"
+                            with st.expander(label):
+                                if s.get("narrativa"):
+                                    st.markdown(s["narrativa"])
+                                c1, c2 = st.columns(2)
+                                with c1:
+                                    if s.get("minacce"):
+                                        st.markdown("**⚠️ Minacce:**\n" + "\n".join(f"- {m}" for m in s["minacce"]))
+                                with c2:
+                                    if s.get("opportunita"):
+                                        st.markdown("**✨ Opportunità:**\n" + "\n".join(f"- {o}" for o in s["opportunita"]))
+
     st.stop()
 
 # ── Sessione attiva ───────────────────────────────────────

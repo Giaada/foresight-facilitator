@@ -113,6 +113,21 @@ if not st.session_state.get("sessione_id"):
         if "nmod_n_fenomeni" not in st.session_state:
             st.session_state.nmod_n_fenomeni = 1
 
+        # Applica i fenomeni importati da file PRIMA che i widget vengano renderizzati
+        if "nmod_import_pending" in st.session_state:
+            righe_pending = st.session_state.pop("nmod_import_pending")
+            esistenti = []
+            for i in range(st.session_state.nmod_n_fenomeni):
+                t = st.session_state.get(f"nmod_t_{i}", "").strip()
+                d = st.session_state.get(f"nmod_d_{i}", "").strip()
+                if t:
+                    esistenti.append((t, d))
+            tutti = esistenti + righe_pending
+            st.session_state.nmod_n_fenomeni = len(tutti) if tutti else 1
+            for i, (t, d) in enumerate(tutti):
+                st.session_state[f"nmod_t_{i}"] = t
+                st.session_state[f"nmod_d_{i}"] = d
+
         st.text_input("Nome Modello *", placeholder="Es. Workshop Energia 2050 - Base", key="nmod_titolo")
         st.text_area("Domanda di ricerca *", height=80, key="nmod_domanda")
         st.text_input("Orizzonte temporale *", key="nmod_frame")
@@ -170,18 +185,9 @@ if not st.session_state.get("sessione_id"):
                     if testo and testo.lower() != "nan":
                         righe.append((testo, descrizione))
                 if righe:
-                    # mantieni eventuali fenomeni già inseriti manualmente
-                    esistenti = []
-                    for i in range(st.session_state.nmod_n_fenomeni):
-                        t = st.session_state.get(f"nmod_t_{i}", "").strip()
-                        d = st.session_state.get(f"nmod_d_{i}", "").strip()
-                        if t:
-                            esistenti.append((t, d))
-                    tutti = esistenti + righe
-                    st.session_state.nmod_n_fenomeni = len(tutti)
-                    for i, (t, d) in enumerate(tutti):
-                        st.session_state[f"nmod_t_{i}"] = t
-                        st.session_state[f"nmod_d_{i}"] = d
+                    # Salva in chiave temporanea: verrà applicata al prossimo rerun,
+                    # prima che i widget vengano renderizzati (evita il conflitto di Streamlit)
+                    st.session_state.nmod_import_pending = righe
                     st.success(f"✅ Importati {len(righe)} fenomeni dal file.")
                     st.rerun()
                 else:

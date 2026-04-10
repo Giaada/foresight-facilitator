@@ -1,48 +1,47 @@
 import markdown
 import streamlit.components.v1 as components
 
+def _esc(s):
+    return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
 def st_scarica_pdf_scenario_individuale(scenario_indiv, sessione, nome_partecipante):
-    # Genera markdown
-    lines = [
-        f"# Scenario Individuale — {nome_partecipante}",
-        f"",
-        f"**Sessione:** {sessione['domanda_ricerca']}",
-        f"**Orizzonte temporale:** {sessione['frame_temporale']}",
-        f"**Quadrante assegnato:** `{scenario_indiv['quadrante']}`",
-        f"",
-    ]
+    # Costruisce HTML direttamente (evita problemi di parsing con markdown.markdown)
+    sezioni = []
+
+    sezioni.append(f"<h1>Scenario Individuale — {_esc(nome_partecipante)}</h1>")
+    sezioni.append(
+        f"<p><strong>Sessione:</strong> {_esc(sessione['domanda_ricerca'])}<br>"
+        f"<strong>Orizzonte temporale:</strong> {_esc(sessione['frame_temporale'])}<br>"
+        f"<strong>Quadrante assegnato:</strong> <code>{_esc(scenario_indiv['quadrante'])}</code></p>"
+    )
+
     if scenario_indiv.get("titolo"):
-        lines += [
-            f"<div class='scenario-title-box'>",
-            f"  <span class='scenario-label'>Scenario {scenario_indiv['numero']}</span>",
-            f"  <h2 class='scenario-name'>{scenario_indiv['titolo']}</h2>",
-            f"</div>",
-            f""
-        ]
+        sezioni.append(
+            f"<div class='scenario-title-box'>"
+            f"<span class='scenario-label'>Scenario {scenario_indiv['numero']}</span>"
+            f"<h2 class='scenario-name'>{_esc(scenario_indiv['titolo'])}</h2>"
+            f"</div>"
+        )
+
     if scenario_indiv.get("narrativa"):
-        lines.append(scenario_indiv["narrativa"])
-        lines.append("")
+        sezioni.append(f"<h3>📖 Narrativa</h3><p>{_esc(scenario_indiv['narrativa']).replace(chr(10), '<br>')}</p>")
 
     if scenario_indiv.get("key_points_data"):
-        lines.append("### Key Points Esplorati")
-        for kp, ris in scenario_indiv["key_points_data"].items():
-            lines.append(f"- **{kp}:** {ris}")
-        lines.append("")
+        kp_items = "".join(
+            f"<li><strong>{_esc(kp)}:</strong> {_esc(ris)}</li>"
+            for kp, ris in scenario_indiv["key_points_data"].items()
+        )
+        sezioni.append(f"<h3>🎯 Key Points Esplorati</h3><ul>{kp_items}</ul>")
 
     if scenario_indiv.get("minacce"):
-        lines.append("<div class='box minacce'><h4>⚠️ Minacce</h4><ul>")
-        for m in scenario_indiv["minacce"]:
-            lines.append(f"<li>{m}</li>")
-        lines.append("</ul></div>")
-        
-    if scenario_indiv.get("opportunita"):
-        lines.append("<div class='box opportunita'><h4>✨ Opportunità</h4><ul>")
-        for o in scenario_indiv["opportunita"]:
-            lines.append(f"<li>{o}</li>")
-        lines.append("</ul></div>")
+        items = "".join(f"<li>{_esc(m)}</li>" for m in scenario_indiv["minacce"])
+        sezioni.append(f"<div class='box minacce'><h4>⚠️ Minacce</h4><ul>{items}</ul></div>")
 
-    md = "\n".join(lines)
-    html_content = markdown.markdown(md)
+    if scenario_indiv.get("opportunita"):
+        items = "".join(f"<li>{_esc(o)}</li>" for o in scenario_indiv["opportunita"])
+        sezioni.append(f"<div class='box opportunita'><h4>✨ Opportunità</h4><ul>{items}</ul></div>")
+
+    html_content = "\n".join(sezioni)
     
     unique_id = f"pdf-sc-{scenario_indiv['id']}"
 

@@ -186,11 +186,15 @@ def st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti, partecipanti
       h1 { color: #4F46E5; border-bottom: 2px solid #e0e7ff; padding-bottom: 12px; margin-bottom: 20px; font-size: 22px; }
       h2 { color: #312E81; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; margin-top: 0; margin-bottom: 16px; font-size: 17px; }
       h3 { color: #4338CA; margin-top: 18px; margin-bottom: 8px; font-size: 14px; }
-      p, li { line-height: 1.7; font-size: 13px; }
+      p { line-height: 1.7; font-size: 13px; page-break-inside: avoid; }
+      li { line-height: 1.7; font-size: 13px; page-break-inside: avoid; }
+      ul, ol { page-break-inside: avoid; }
+      h1, h2, h3 { page-break-after: avoid; page-break-inside: avoid; }
       strong { color: #111827; }
       blockquote { border-left: 4px solid #4F46E5; padding: 6px 14px; margin-left: 0;
-                   color: #4B5563; font-style: italic; background: #F3F4F6; border-radius: 4px; }
-      .section { page-break-before: always; padding-top: 8px; }
+                   color: #4B5563; font-style: italic; background: #F3F4F6; border-radius: 4px;
+                   page-break-inside: avoid; }
+      .section { page-break-before: always; padding-top: 8px; page-break-inside: avoid; }
       .section:first-of-type { page-break-before: avoid; }
       .box { padding: 12px 14px; margin: 10px 0; border-radius: 8px; border-left: 5px solid; page-break-inside: avoid; }
       .box h3 { margin-top: 0; margin-bottom: 8px; font-size: 13px; }
@@ -416,7 +420,7 @@ def st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti, partecipanti
     image:{{type:'jpeg',quality:0.98}},
     html2canvas:{{scale:2,useCORS:true,windowWidth:700,x:0,y:0,scrollX:0,scrollY:0}},
     jsPDF:{{unit:'mm',format:'a4',orientation:'portrait'}},
-    pagebreak:{{mode:['css','legacy']}}
+    pagebreak:{{mode:['avoid-all','css','legacy']}}
   }};
   html2pdf().set(opt).from(el).save().then(function(){{
     btn.innerHTML=originalText;

@@ -281,6 +281,24 @@ def st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti, partecipanti
             f"</div>"
         )
 
+    # — Fenomeni prioritizzati —
+    s.append("<div class='section'>")
+    s.append("<h2>📋 Fenomeni prioritizzati</h2>")
+    COLORI_RANK = ["#7C3AED", "#2563EB", "#0D9488", "#9CA3AF"]
+    n_fen = len(fenomeni_ordinati)
+    for pos, testo, avg in fenomeni_ordinati:
+        tier = min(int((pos - 1) / n_fen * 4), 3) if n_fen else 0
+        colore = COLORI_RANK[tier]
+        avg_str = f"<span class='rank-avg'>media {avg:.1f}</span>" if avg is not None else ""
+        s.append(
+            f"<div class='rank-row'>"
+            f"<div class='rank-num' style='background:{colore}'>{pos}</div>"
+            f"<div class='rank-text'>{_esc(testo)}</div>"
+            f"{avg_str}"
+            f"</div>"
+        )
+    s.append("</div>")
+
     # — Driver (nuova pagina) —
     if sessione.get("driver1_nome") or sessione.get("driver2_nome"):
         s.append("<div class='section'>")
@@ -302,24 +320,6 @@ def st_scarica_pdf_report_finale(sessione, scenari, fenomeni, voti, partecipanti
         if sessione.get("driver1_nome"):
             s.append(_build_pdf_quadrant_matrix(sessione, scenari))
         s.append("</div>")
-
-    # — Fenomeni prioritizzati —
-    s.append("<div class='section'>")
-    s.append("<h2>📋 Fenomeni prioritizzati</h2>")
-    COLORI_RANK = ["#7C3AED", "#2563EB", "#0D9488", "#9CA3AF"]
-    n_fen = len(fenomeni_ordinati)
-    for pos, testo, avg in fenomeni_ordinati:
-        tier = min(int((pos - 1) / n_fen * 4), 3) if n_fen else 0
-        colore = COLORI_RANK[tier]
-        avg_str = f"<span class='rank-avg'>media {avg:.1f}</span>" if avg is not None else ""
-        s.append(
-            f"<div class='rank-row'>"
-            f"<div class='rank-num' style='background:{colore}'>{pos}</div>"
-            f"<div class='rank-text'>{_esc(testo)}</div>"
-            f"{avg_str}"
-            f"</div>"
-        )
-    s.append("</div>")
 
     # — Indice scenari —
     if scenari:

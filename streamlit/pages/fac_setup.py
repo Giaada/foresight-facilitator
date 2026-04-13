@@ -172,6 +172,17 @@ if not st.session_state.get("sessione_id"):
                 st.session_state[f"nmod_t_{i}"] = t
                 st.session_state[f"nmod_d_{i}"] = d
 
+        # Applica eliminazione fenomeno PRIMA che i widget vengano renderizzati
+        if "nmod_delete_pending" in st.session_state:
+            i_del = st.session_state.pop("nmod_delete_pending")
+            n = st.session_state.nmod_n_fenomeni
+            for j in range(i_del, n - 1):
+                st.session_state[f"nmod_t_{j}"] = st.session_state.get(f"nmod_t_{j+1}", "")
+                st.session_state[f"nmod_d_{j}"] = st.session_state.get(f"nmod_d_{j+1}", "")
+            st.session_state.pop(f"nmod_t_{n-1}", None)
+            st.session_state.pop(f"nmod_d_{n-1}", None)
+            st.session_state.nmod_n_fenomeni = max(1, n - 1)
+
         st.text_input("Nome Modello *", placeholder="Es. Workshop Energia 2050 - Base", key="nmod_titolo")
         st.text_area("Domanda di ricerca *", height=80, key="nmod_domanda")
         st.text_input("Orizzonte temporale *", key="nmod_frame")
@@ -199,10 +210,7 @@ if not st.session_state.get("sessione_id"):
                               label_visibility="collapsed")
             with cols[2]:
                 if n_fen > 1 and st.button("🗑️", key=f"del_nmod_{i}"):
-                    for j in range(i, n_fen - 1):
-                        st.session_state[f"nmod_t_{j}"] = st.session_state.get(f"nmod_t_{j+1}", "")
-                        st.session_state[f"nmod_d_{j}"] = st.session_state.get(f"nmod_d_{j+1}", "")
-                    st.session_state.nmod_n_fenomeni -= 1
+                    st.session_state.nmod_delete_pending = i
                     st.rerun()
 
         if st.button("➕ Aggiungi fenomeno", key="nmod_add"):

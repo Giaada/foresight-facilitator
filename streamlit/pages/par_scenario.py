@@ -340,6 +340,17 @@ else:
                     with st.chat_message("user", avatar="🙋"):
                         st.markdown(msg["contenuto"])
     
+        # Avviso e bottone se l'agente non ha ancora risposto all'ultimo messaggio
+        if messaggi and messaggi[-1]["ruolo"] == "user" and sc["step_corrente"] != "concluso":
+            col_warn, col_btn = st.columns([3, 1])
+            with col_warn:
+                st.warning("⚠️ L'agente non ha ancora risposto.")
+            with col_btn:
+                if st.button("🔔 Sollecita", use_container_width=True):
+                    with st.spinner("L'agente sta elaborando..."):
+                        invia_messaggio(sc, sessione, "[continua]")
+                    st.rerun()
+
         # Input risposta gruppo
         if sc["step_corrente"] != "concluso":
             testo = st.chat_input(
@@ -419,10 +430,13 @@ else:
                         for o in sc_live["opportunita"]:
                             st.markdown(f"- {o}")
     
-                if sc_live.get("key_points_data"):
-                    st.markdown("**Key Points esplorati:**")
-                    for kp, risposta in sc_live["key_points_data"].items():
-                        st.markdown(f"- **{kp}:** {risposta}")
+                kp_data = sc_live.get("key_points_data") or {}
+                kps_sessione = sessione.get("key_points") or []
+                kp_mostrabili = [(kp, kp_data[kp]) for kp in kps_sessione if kp in kp_data and kp_data[kp]]
+                if kp_mostrabili:
+                    with st.expander(f"🔍 Temi esplorati ({len(kp_mostrabili)}/{len(kps_sessione)})", expanded=False):
+                        for kp, risposta in kp_mostrabili:
+                            st.markdown(f"- **{kp}:** {risposta}")
     
                 if not any([
                     sc_live.get("titolo"),

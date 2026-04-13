@@ -173,15 +173,16 @@ if not st.session_state.get("sessione_id"):
                 st.session_state[f"nmod_d_{i}"] = d
 
         # Applica eliminazione fenomeno PRIMA che i widget vengano renderizzati
-        if "nmod_delete_pending" in st.session_state:
-            i_del = st.session_state.pop("nmod_delete_pending")
-            n = st.session_state.nmod_n_fenomeni
-            for j in range(i_del, n - 1):
-                st.session_state[f"nmod_t_{j}"] = st.session_state.get(f"nmod_t_{j+1}", "")
-                st.session_state[f"nmod_d_{j}"] = st.session_state.get(f"nmod_d_{j+1}", "")
-            st.session_state.pop(f"nmod_t_{n-1}", None)
-            st.session_state.pop(f"nmod_d_{n-1}", None)
-            st.session_state.nmod_n_fenomeni = max(1, n - 1)
+        if "nmod_delete_result" in st.session_state:
+            new_items = st.session_state.pop("nmod_delete_result")
+            old_n = st.session_state.nmod_n_fenomeni
+            for k in range(old_n + 5):
+                st.session_state.pop(f"nmod_t_{k}", None)
+                st.session_state.pop(f"nmod_d_{k}", None)
+            for k, (t, d) in enumerate(new_items):
+                st.session_state[f"nmod_t_{k}"] = t
+                st.session_state[f"nmod_d_{k}"] = d
+            st.session_state.nmod_n_fenomeni = max(1, len(new_items))
 
         st.text_input("Nome Modello *", placeholder="Es. Workshop Energia 2050 - Base", key="nmod_titolo")
         st.text_area("Domanda di ricerca *", height=80, key="nmod_domanda")
@@ -210,7 +211,12 @@ if not st.session_state.get("sessione_id"):
                               label_visibility="collapsed")
             with cols[2]:
                 if n_fen > 1 and st.button("🗑️", key=f"del_nmod_{i}"):
-                    st.session_state.nmod_delete_pending = i
+                    # Leggi tutti i valori SUBITO (prima del rerun, mentre sono ancora in session_state)
+                    new_items = [
+                        (st.session_state.get(f"nmod_t_{k}", ""), st.session_state.get(f"nmod_d_{k}", ""))
+                        for k in range(n_fen) if k != i
+                    ]
+                    st.session_state["nmod_delete_result"] = new_items
                     st.rerun()
 
         if st.button("➕ Aggiungi fenomeno", key="nmod_add"):

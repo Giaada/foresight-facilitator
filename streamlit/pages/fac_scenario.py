@@ -88,21 +88,21 @@ st.divider()
 
 if stato == "scenario_planning":
     st.info("Fase 1: **Drafting Individuale**. I partecipanti stanno lavorando in autonomia.")
-    
+
     tab_labels = [f"Gruppo {s['numero']}" for s in scenari_gruppo]
     tabs = st.tabs(tab_labels)
-    
+
     for tab, sc_g in zip(tabs, scenari_gruppo):
         with tab:
             indivs = [s for s in scenari_individuali if s["numero"] == sc_g["numero"]]
             st.markdown(f"**Membri di questo quadrante ({len(indivs)})**")
-            
+
             for s_ind in indivs:
                 nome_par = par_map.get(s_ind["partecipante_id"], "Sconosciuto")
                 step_val = s_ind.get("step_corrente", "intro")
                 is_done = (step_val == "concluso")
-                
-                with st.expander(f"👤 {nome_par} - Step: {STEP_LABEL.get(step_val, step_val)} {'✅' if is_done else '⏳'}"):
+
+                with st.expander(f"👤 {nome_par} — {STEP_LABEL.get(step_val, step_val)} {'✅' if is_done else '⏳'}"):
                     if s_ind.get("narrativa"):
                         st.markdown(f"**Bozza:** {s_ind['narrativa']}")
                     if s_ind.get("minacce"):
@@ -110,26 +110,65 @@ if stato == "scenario_planning":
                     if s_ind.get("opportunita"):
                         st.markdown("**Opportunità:** " + ", ".join(s_ind["opportunita"]))
 
+            st.divider()
+
+            n_conclusi = sum(1 for s in indivs if s["step_corrente"] == "concluso")
+            n_tot = len(indivs)
+            bozza_generata = bool(sc_g.get("narrativa"))
+
+            if bozza_generata:
+                st.success(f"✅ Bozza integrata generata per il Gruppo {sc_g['numero']}.")
+                if st.button(f"🔄 Rigenera Bozza", key=f"rigenera_{sc_g['id']}", use_container_width=True):
+                    with st.spinner("Rigenerazione in corso..."):
+                        unisci_scenari_gruppo(sc_g, sessione, indivs)
+                    st.success("Bozza rigenerata!")
+                    st.rerun()
+            else:
+                if n_conclusi < n_tot:
+                    st.warning(f"⏳ {n_conclusi}/{n_tot} partecipanti hanno completato il lavoro individuale.")
+                else:
+                    st.success(f"✅ Tutti i {n_tot} partecipanti hanno completato il lavoro individuale.")
+                if st.button(
+                    f"🚀 Genera Bozza Integrata — Gruppo {sc_g['numero']}",
+                    key=f"genera_{sc_g['id']}",
+                    type="primary",
+                    use_container_width=True,
+                ):
+                    with st.spinner(f"L'AI sta integrando i contributi del Gruppo {sc_g['numero']}..."):
+                        unisci_scenari_gruppo(sc_g, sessione, indivs)
+                    st.success(f"Bozza del Gruppo {sc_g['numero']} generata!")
+                    st.rerun()
+
     st.divider()
-    
-    # Check if all individuals are done
-    tutti_conclusi = all(s["step_corrente"] == "concluso" for s in scenari_individuali) if scenari_individuali else False
-    
+
+    # ── Avanzamento fase globale ──────────────────────────────
+    n_bozze = sum(1 for sc_g in scenari_gruppo if sc_g.get("narrativa"))
+    n_gruppi = len(scenari_gruppo)
+    completati_tot = sum(1 for s in scenari_individuali if s["step_corrente"] == "concluso")
+    tot_indiv = len(scenari_individuali)
+
     with st.container(border=True):
-        if tutti_conclusi:
-            st.success("Tutti i partecipanti hanno completato la loro stesura individuale!")
+        col_stat1, col_stat2 = st.columns(2)
+        with col_stat1:
+            st.metric("Lavori individuali conclusi", f"{completati_tot}/{tot_indiv}")
+        with col_stat2:
+            st.metric("Bozze di gruppo generate", f"{n_bozze}/{n_gruppi}")
+
+        if n_bozze == 0:
+            st.info("Genera almeno una bozza integrata per poter avanzare alla Fase di Gruppo.")
+        elif n_bozze < n_gruppi:
+            st.warning(f"Solo {n_bozze}/{n_gruppi} bozze generate. I gruppi mancanti non potranno accedere alla fase di discussione finché non avranno una bozza.")
         else:
-            completati = sum(1 for s in scenari_individuali if s["step_corrente"] == "concluso")
-            st.warning(f"In attesa del completamento individuale ({completati}/{len(scenari_individuali)} conclusi).")
-            
-        st.markdown("Crea la bozza consolidata per spostare la sessione alla **Fase 2 (Discussione di Gruppo)**.")
-        if st.button("🚀 Genera Bozze Integrate di Gruppo e Unisci Partecipanti", type="primary", use_container_width=True):
-            with st.spinner("L'Intelligenza Artificiale sta leggendo e unificando tutti i contributi..."):
-                for sc_g in scenari_gruppo:
-                    indivs = [s for s in scenari_individuali if s["numero"] == sc_g["numero"]]
-                    unisci_scenari_gruppo(sc_g, sessione, indivs)
-                aggiorna_sessione(sid, stato="scenario_planning_gruppo")
-            st.success("Bozze consolidate con successo!")
+            st.success("Tutte le bozze sono pronte!")
+
+        if st.button(
+            "▶️ Avanza alla Fase di Gruppo",
+            type="primary",
+            use_container_width=True,
+            disabled=(n_bozze == 0),
+        ):
+            aggiorna_sessione(sid, stato="scenario_planning_gruppo")
+            st.success("Sessione avanzata alla Fase di Gruppo!")
             st.rerun()
 
 elif stato in ("scenario_planning_gruppo", "concluso"):

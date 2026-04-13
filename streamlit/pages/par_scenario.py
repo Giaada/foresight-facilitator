@@ -43,7 +43,7 @@ stato = sessione.get("stato")
 if stato not in ("scenario_planning", "scenario_planning_gruppo", "concluso"):
     st.info("⏳ La sessione non è ancora nella fase di Scenario Planning. Attendi istruzioni dal facilitatore.")
 
-    @st.fragment(run_every=10)
+    @st.fragment(run_every=15)
     def _attendi_scenario():
         s = get_sessione_by_id(sessione_id)
         if s and s.get("stato") in ("scenario_planning", "scenario_planning_gruppo", "concluso"):
@@ -62,7 +62,7 @@ gruppo_numero = par_db.get("gruppo_numero") if par_db else None
 if not gruppo_numero:
     st.info("⏳ Non sei ancora stato/a assegnato/a a un gruppo. Attendi che il facilitatore assegni i gruppi.")
 
-    @st.fragment(run_every=10)
+    @st.fragment(run_every=15)
     def _attendi_gruppo():
         plist = get_partecipanti(sessione_id)
         p = next((x for x in plist if x["id"] == partecipante_id), None)
@@ -169,7 +169,7 @@ if is_group_phase:
                 
         st.divider()
         
-        @st.fragment(run_every=5)
+        @st.fragment(run_every=15)
         def _sezione_definitiva():
             sc_live = get_scenario(sc["id"])
             if not sc_live: return
@@ -243,7 +243,7 @@ if is_group_phase:
         st.divider()
         
         # ── Sezione stato e azioni di gruppo (auto-aggiornante) ──
-        @st.fragment(run_every=5)
+        @st.fragment(run_every=15)
         def _stato_gruppo():
             # Re-fetch fresh data
             sessione_live = get_sessione_by_id(sessione_id)
@@ -377,7 +377,7 @@ else:
             st.info("Attendi che tutti i componenti finiscano. Poi il facilitatore genererà la Bozza Consolidata in cui discuterete in Gruppo!")
             
             # Auto-aggiornamento durante l'attesa per saltare al gruppo appena attivato
-            @st.fragment(run_every=5)
+            @st.fragment(run_every=15)
             def poll_group():
                 ss = get_sessione_by_id(sessione_id)
                 if ss and ss.get("stato") in ("scenario_planning_gruppo", "concluso"):
@@ -388,7 +388,7 @@ else:
     with col_panel:
         scenario_id_for_panel = sc["id"]
         
-        @st.fragment(run_every=3)
+        @st.fragment(run_every=20)
         def _pannello_scenario():
             sc_live = get_scenario(scenario_id_for_panel)
             if not sc_live:

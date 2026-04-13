@@ -39,23 +39,23 @@ def exec_query(query, params=(), fetch=None, return_id=False):
         if IS_POSTGRES:
             q = query.replace("?", "%s")
             q = q.replace("INTEGER PRIMARY KEY AUTOINCREMENT", "SERIAL PRIMARY KEY")
-            
+
             if q.startswith("INSERT OR REPLACE INTO voto"):
                 q = q.replace("INSERT OR REPLACE INTO voto", "INSERT INTO voto")
                 q += " ON CONFLICT (partecipante_id, fenomeno_id) DO UPDATE SET posizione = EXCLUDED.posizione"
-                
+
             if return_id:
                 q += " RETURNING id"
-                
+
             cur = conn.cursor()
             cur.execute(q, params)
-            
+
             if return_id:
                 res = cur.fetchone()
                 val = res['id'] if res else None
                 conn.close()
                 return val
-                
+
             if fetch == 'all':
                 res = cur.fetchall()
                 conn.close()
@@ -64,12 +64,12 @@ def exec_query(query, params=(), fetch=None, return_id=False):
                 res = cur.fetchone()
                 conn.close()
                 return dict(res) if res else None
-                
+
             conn.close()
             return None
         else:
             cur = conn.execute(query, params)
-            
+
             if fetch == 'all':
                 res = cur.fetchall()
                 conn.commit()
@@ -80,13 +80,13 @@ def exec_query(query, params=(), fetch=None, return_id=False):
                 conn.commit()
                 conn.close()
                 return dict(res) if res else None
-                
+
             if return_id:
                 val = cur.lastrowid
                 conn.commit()
                 conn.close()
                 return val
-                
+
             conn.commit()
             conn.close()
     except Exception as e:
@@ -144,7 +144,7 @@ def init_db():
             driver2_neg TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
-        
+
         CREATE TABLE IF NOT EXISTS modello (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT NOT NULL,
@@ -231,13 +231,13 @@ def crea_sessione(domanda, frame, key_points, fenomeni):
         existing = exec_query("SELECT id FROM sessione WHERE codice = ?", (codice,), fetch='one')
         if not existing:
             break
-            
+
     sid = exec_query(
         "INSERT INTO sessione (codice, domanda_ricerca, frame_temporale, key_points) VALUES (?, ?, ?, ?)",
         (codice, domanda, frame, json.dumps(key_points, ensure_ascii=False)),
         return_id=True
     )
-    
+
     for i, f in enumerate(fenomeni):
         exec_query(
             "INSERT INTO fenomeno (sessione_id, testo, descrizione, priorita) VALUES (?, ?, ?, ?)",
@@ -254,6 +254,7 @@ def _parse_sessione(d):
         d["key_points"] = []
     return d
 
+@st.cache_data(ttl=10)
 def get_sessione_by_id(sid):
     return _parse_sessione(exec_query("SELECT * FROM sessione WHERE id = ?", (sid,), fetch='one'))
 
@@ -272,12 +273,14 @@ def aggiorna_sessione(sid, **kwargs):
     fields = ", ".join(f"{k} = ?" for k in kwargs)
     values = list(kwargs.values()) + [sid]
     exec_query(f"UPDATE sessione SET {fields} WHERE id = ?", values)
+    get_sessione_by_id.clear()
 
 def lista_sessioni():
     return exec_query("SELECT id, codice, domanda_ricerca, frame_temporale, stato, created_at FROM sessione ORDER BY created_at DESC", fetch='all')
 
 # ── Fenomeni ──────────────────────────────────────────────
 
+@st.cache_data(ttl=10)
 def get_fenomeni(sessione_id):
     return exec_query("SELECT * FROM fenomeno WHERE sessione_id = ? ORDER BY priorita ASC", (sessione_id,), fetch='all')
 
@@ -286,15 +289,21 @@ def aggiungi_fenomeno(sessione_id, testo, descrizione=""):
         "INSERT INTO fenomeno (sessione_id, testo, descrizione, priorita) VALUES (?, ?, ?, ?)",
         (sessione_id, testo, descrizione, 999)
     )
+    get_fenomeni.clear()
+    get_tutti_fenomeni_unici.clear()
 
 def elimina_fenomeno(fid):
     exec_query("DELETE FROM fenomeno WHERE id = ?", (fid,))
+    get_fenomeni.clear()
+    get_tutti_fenomeni_unici.clear()
 
 def aggiorna_fenomeno(fid, testo, descrizione=""):
     exec_query(
         "UPDATE fenomeno SET testo = ?, descrizione = ? WHERE id = ?",
         (testo, descrizione, fid)
     )
+    get_fenomeni.clear()
+    get_tutti_fenomeni_unici.clear()
 
 def elimina_sessione(sessione_id):
     exec_query("DELETE FROM voto WHERE partecipante_id IN (SELECT id FROM partecipante WHERE sessione_id = ?)", (sessione_id,))
@@ -303,6 +312,15 @@ def elimina_sessione(sessione_id):
     exec_query("DELETE FROM partecipante WHERE sessione_id = ?", (sessione_id,))
     exec_query("DELETE FROM fenomeno WHERE sessione_id = ?", (sessione_id,))
     exec_query("DELETE FROM sessione WHERE id = ?", (sessione_id,))
+    get_sessione_by_id.clear()
+    get_fenomeni.clear()
+    get_partecipanti.clear()
+    get_voti_aggregati.clear()
+    get_scenari.clear()
+    get_scenari_individuali.clear()
+    get_scenario_individuale.clear()
+    get_scenario.clear()
+    get_tutti_fenomeni_unici.clear()
 
 def aggiorna_priorita_fenomeni(sessione_id, ordine_ids):
     for i, fid in enumerate(ordine_ids):
@@ -310,6 +328,7 @@ def aggiorna_priorita_fenomeni(sessione_id, ordine_ids):
             "UPDATE fenomeno SET priorita = ? WHERE id = ? AND sessione_id = ?",
             (i, fid, sessione_id)
         )
+    get_fenomeni.clear()
 
 # ── Partecipanti ──────────────────────────────────────────
 
@@ -327,6 +346,7 @@ def registra_partecipante(sessione_id, nome):
         (sessione_id, nome),
         return_id=True
     )
+    get_partecipanti.clear()
     return {"id": pid, "nome": nome, "sessione_id": sessione_id}
 
 def get_partecipante_by_id(pid):
@@ -335,6 +355,7 @@ def get_partecipante_by_id(pid):
         return {"id": row["id"], "nome": row["nome"], "sessione_id": row["sessione_id"]}
     return None
 
+@st.cache_data(ttl=15)
 def get_partecipanti(sessione_id):
     return exec_query("SELECT * FROM partecipante WHERE sessione_id = ? ORDER BY id ASC", (sessione_id,), fetch='all')
 
@@ -344,6 +365,7 @@ def aggiorna_partecipante(pid, **kwargs):
     fields = ", ".join(f"{k} = ?" for k in kwargs)
     values = list(kwargs.values()) + [pid]
     exec_query(f"UPDATE partecipante SET {fields} WHERE id = ?", values)
+    get_partecipanti.clear()
 
 # ── Voti ──────────────────────────────────────────────────
 
@@ -355,7 +377,10 @@ def salva_voti(partecipante_id, ranking):
             (partecipante_id, v["fenomeno_id"], v["posizione"])
         )
     exec_query("UPDATE partecipante SET votato = 1 WHERE id = ?", (partecipante_id,))
+    get_voti_aggregati.clear()
+    get_partecipanti.clear()
 
+@st.cache_data(ttl=15)
 def get_voti_aggregati(sessione_id):
     return exec_query(
         """
@@ -375,15 +400,15 @@ def get_voti_aggregati(sessione_id):
 def crea_scenari(sessione_id):
     quadranti = [(1, "++"), (2, "+-"), (3, "-+"), (4, "--")]
     quad_map = {1: "++", 2: "+-", 3: "-+", 4: "--"}
-    
+
     exec_query("DELETE FROM scenario WHERE sessione_id = ?", (sessione_id,))
-    
+
     for n, q in quadranti:
         exec_query(
             "INSERT INTO scenario (sessione_id, numero, quadrante) VALUES (?, ?, ?)",
             (sessione_id, n, q)
         )
-        
+
     partecipanti = exec_query("SELECT id, gruppo_numero FROM partecipante WHERE sessione_id = ? AND gruppo_numero IS NOT NULL", (sessione_id,), fetch='all')
     for p in partecipanti or []:
         pid = p["id"]
@@ -394,6 +419,10 @@ def crea_scenari(sessione_id):
                 "INSERT INTO scenario (sessione_id, numero, quadrante, partecipante_id) VALUES (?, ?, ?, ?)",
                 (sessione_id, gnum, q, pid)
             )
+    get_scenari.clear()
+    get_scenari_individuali.clear()
+    get_scenario_individuale.clear()
+    get_scenario.clear()
 
 def _parse_scenario(d):
     if not d:
@@ -404,17 +433,19 @@ def _parse_scenario(d):
             d[field] = json.loads(val) if val else []
         except Exception:
             d[field] = []
-            
+
     try:
         d["key_points_data"] = json.loads(d["key_points_data"] or "{}")
     except Exception:
         d["key_points_data"] = {}
     return d
 
+@st.cache_data(ttl=10)
 def get_scenari(sessione_id):
     rows = exec_query("SELECT * FROM scenario WHERE sessione_id = ? AND partecipante_id IS NULL ORDER BY numero", (sessione_id,), fetch='all')
     return [_parse_scenario(r) for r in (rows or [])]
 
+@st.cache_data(ttl=10)
 def get_scenari_individuali(sessione_id, gruppo_numero=None):
     if gruppo_numero:
         rows = exec_query(
@@ -430,6 +461,7 @@ def get_scenari_individuali(sessione_id, gruppo_numero=None):
         )
     return [_parse_scenario(r) for r in (rows or [])]
 
+@st.cache_data(ttl=10)
 def get_scenario_individuale(sessione_id, partecipante_id):
     return _parse_scenario(exec_query(
         "SELECT * FROM scenario WHERE sessione_id = ? AND partecipante_id = ?",
@@ -437,6 +469,7 @@ def get_scenario_individuale(sessione_id, partecipante_id):
         fetch='one'
     ))
 
+@st.cache_data(ttl=5)
 def get_scenario(scenario_id):
     return _parse_scenario(exec_query("SELECT * FROM scenario WHERE id = ?", (scenario_id,), fetch='one'))
 
@@ -449,6 +482,10 @@ def aggiorna_scenario(scenario_id, **kwargs):
     fields = ", ".join(f"{k} = ?" for k in kwargs)
     values = list(kwargs.values()) + [scenario_id]
     exec_query(f"UPDATE scenario SET {fields} WHERE id = ?", values)
+    get_scenario.clear()
+    get_scenari.clear()
+    get_scenari_individuali.clear()
+    get_scenario_individuale.clear()
 
 # ── Messaggi ──────────────────────────────────────────────
 
@@ -468,7 +505,9 @@ def crea_modello(nome, domanda_ricerca, frame_temporale, key_points, fenomeni_ra
         "INSERT INTO modello (nome, domanda_ricerca, frame_temporale, key_points, fenomeni_raw) VALUES (?, ?, ?, ?, ?)",
         (nome, domanda_ricerca, frame_temporale, json.dumps(key_points, ensure_ascii=False), fenomeni_raw)
     )
+    get_modelli.clear()
 
+@st.cache_data(ttl=30)
 def get_modelli():
     rows = exec_query("SELECT * FROM modello ORDER BY created_at DESC", fetch='all')
     res = []
@@ -492,7 +531,9 @@ def get_modello_by_id(modello_id):
 
 def elimina_modello(modello_id):
     exec_query("DELETE FROM modello WHERE id = ?", (modello_id,))
+    get_modelli.clear()
 
+@st.cache_data(ttl=30)
 def get_tutti_fenomeni_unici():
     """Restituisce tutti i fenomeni unici (testo + descrizione) da tutte le sessioni,
     deduplicati per testo (case-insensitive), ordinati per testo."""

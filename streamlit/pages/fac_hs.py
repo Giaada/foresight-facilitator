@@ -37,7 +37,7 @@ col_left, col_right = st.columns(2)
 with col_left:
     st.subheader("👥 Partecipanti")
 
-    @st.fragment(run_every=10)
+    @st.fragment(run_every=15)
     def _mostra_partecipanti():
         partecipanti = get_partecipanti(sid)
         n_votato = sum(1 for p in partecipanti if p["votato"])
@@ -74,7 +74,7 @@ with col_left:
 with col_right:
     st.subheader("📊 Ranking aggregato")
 
-    @st.fragment(run_every=10)
+    @st.fragment(run_every=15)
     def _mostra_ranking():
         voti = get_voti_aggregati(sid)
         fenomeni = get_fenomeni(sid)

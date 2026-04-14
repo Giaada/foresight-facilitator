@@ -5,6 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from lib.auth import check_partecipante
 from lib.database import (
     get_sessione_by_id, get_scenari, get_scenario,
     get_messaggi, get_partecipanti, get_scenario_individuale, aggiorna_scenario
@@ -12,20 +13,10 @@ from lib.database import (
 from lib.agent import invia_messaggio, avvia_scenario
 from lib.quadrant_ui import draw_quadrant_matrix
 
-# ── Leggi partecipante dalla session ─────────────────────
-partecipante = st.session_state.get("partecipante")
-if not partecipante:
-    st.error("Sessione non trovata. Torna alla home e accedi come partecipante.")
-    st.stop()
-
+partecipante, sessione = check_partecipante()
 sessione_id = partecipante.get("sessione_id")
 partecipante_id = partecipante.get("id")
 nome = partecipante.get("nome", "")
-
-sessione = get_sessione_by_id(sessione_id) if sessione_id else None
-if not sessione:
-    st.error("Sessione non trovata.")
-    st.stop()
 
 # ── Header ────────────────────────────────────────────────
 st.markdown("## 🗺️ Scenario Planning")

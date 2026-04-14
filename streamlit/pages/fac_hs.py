@@ -7,8 +7,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from lib.auth import check_facilitatore
 from lib.database import (
     get_sessione_by_id, aggiorna_sessione, get_fenomeni,
-    get_partecipanti, get_voti_aggregati, aggiungi_fenomeno, elimina_fenomeno, aggiorna_fenomeno
+    get_partecipanti, get_voti_aggregati, aggiungi_fenomeno
 )
+from lib.ui_helpers import fenomeno_row
 
 check_facilitatore()
 
@@ -108,22 +109,7 @@ with col_right:
         st.subheader("📋 Fenomeni in lista")
         fenomeni_tutti = get_fenomeni(sid)
         for f in fenomeni_tutti:
-            col_t, col_edit, col_d = st.columns([5, 1, 1])
-            with col_t:
-                st.markdown(f"**{f['testo']}**")
-                if f.get("descrizione"):
-                    st.caption(f["descrizione"])
-            with col_edit:
-                with st.popover("✏️"):
-                    edit_testo = st.text_input("Testo", value=f["testo"], key=f"et_hs_{f['id']}")
-                    edit_desc = st.text_area("Descrizione", value=f.get("descrizione", ""), key=f"ed_hs_{f['id']}")
-                    if st.button("Salva", key=f"esave_hs_{f['id']}", type="primary"):
-                        aggiorna_fenomeno(f["id"], edit_testo.strip(), edit_desc.strip())
-                        st.rerun(scope="app")
-            with col_d:
-                if st.button("🗑️", key=f"rm_hs_{f['id']}", help="Elimina"):
-                    elimina_fenomeno(f["id"])
-                    st.rerun(scope="app")
+            fenomeno_row(f, key_prefix="hs")
 
     _mostra_ranking()
 

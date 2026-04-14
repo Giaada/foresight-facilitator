@@ -48,3 +48,18 @@ def check_facilitatore():
 # Alias per compatibilità con eventuali import residui
 def check_auth():
     check_facilitatore()
+
+
+def check_partecipante():
+    """Legge il partecipante dalla session_state, carica la sessione dal DB e li restituisce."""
+    from .database import get_sessione_by_id
+    partecipante = st.session_state.get("partecipante")
+    if not partecipante:
+        st.error("Sessione non trovata. Torna alla home e accedi come partecipante.")
+        st.stop()
+    sessione_id = partecipante.get("sessione_id")
+    sessione = get_sessione_by_id(sessione_id) if sessione_id else None
+    if not sessione:
+        st.error("Sessione non trovata.")
+        st.stop()
+    return partecipante, sessione

@@ -4,25 +4,16 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from lib.auth import check_partecipante
 from lib.database import (
     get_sessione_by_id, get_fenomeni, get_partecipanti,
     aggiungi_fenomeno, salva_voti, get_voti_aggregati
 )
 
-# ── Leggi partecipante dalla session ─────────────────────
-partecipante = st.session_state.get("partecipante")
-if not partecipante:
-    st.error("Sessione non trovata. Torna alla home e accedi come partecipante.")
-    st.stop()
-
+partecipante, sessione = check_partecipante()
 sessione_id = partecipante.get("sessione_id")
 partecipante_id = partecipante.get("id")
 nome = partecipante.get("nome", "")
-
-sessione = get_sessione_by_id(sessione_id) if sessione_id else None
-if not sessione:
-    st.error("Sessione non trovata.")
-    st.stop()
 
 # ── Header ────────────────────────────────────────────────
 st.markdown("## 🔭 Horizon Scanning")
@@ -115,20 +106,13 @@ if par_db and par_db.get("votato"):
                 colore, sfondo = COLORI[tier]
                 f_obj = fenomeni_map.get(v["fenomeno_id"], {})
                 nome = f_obj.get("testo", f"Fenomeno #{v['fenomeno_id']}")
-                desc = f_obj.get("descrizione", "")
+                desc = f_obj.get("descrizione") or ""
+                desc_html = f"<div style='font-size:11px;color:#6B7280;margin-top:2px'>{desc}</div>" if desc else ""
                 st.markdown(
-                    f"""<div style="display:flex;align-items:center;gap:10px;
-                        background:{sfondo};border-left:4px solid {colore};
-                        border-radius:8px;padding:8px 12px;margin-bottom:6px;">
-                        <span style="min-width:26px;height:26px;border-radius:50%;
-                            background:{colore};color:white;font-weight:700;
-                            font-size:12px;display:flex;align-items:center;
-                            justify-content:center;">{i+1}</span>
-                        <div>
-                            <div style="font-weight:600;font-size:13px;color:#111827">{nome}</div>
-                            {"<div style='font-size:11px;color:#6B7280;margin-top:2px'>" + desc + "</div>" if desc else ""}
-                        </div>
-                    </div>""",
+                    f"<div style='display:flex;align-items:center;gap:10px;background:{sfondo};border-left:4px solid {colore};border-radius:8px;padding:8px 12px;margin-bottom:6px;'>"
+                    f"<span style='min-width:26px;height:26px;border-radius:50%;background:{colore};color:white;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;'>{i+1}</span>"
+                    f"<div><div style='font-weight:600;font-size:13px;color:#111827'>{nome}</div>{desc_html}</div>"
+                    f"</div>",
                     unsafe_allow_html=True,
                 )
 

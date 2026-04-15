@@ -41,18 +41,18 @@ fenomeni = get_fenomeni(sid)
 fenom_map = {f["id"]: f for f in fenomeni}
 
 if voti:
-    cols = st.columns(min(len(voti), 4))
-    for i, v in enumerate(voti[:8]):
+    cols = st.columns(min(len(voti), 5))
+    for i, v in enumerate(voti[:10]):
         f = fenom_map.get(v["fenomeno_id"])
         testo = f["testo"] if f else f"Fenomeno #{v['fenomeno_id']}"
-        with cols[i % 4]:
+        with cols[i % 5]:
             with st.container(border=True):
                 badge = "🥇" if i == 0 else "🥈" if i == 1 else "🥉" if i == 2 else f"{i+1}°"
                 st.markdown(f"{badge} **{testo}**")
                 st.caption(f"avg pos: {v['media_posizione']:.1f}")
 else:
     # Fallback: mostra fenomeni per priorità manuale
-    for i, f in enumerate(fenomeni[:8]):
+    for i, f in enumerate(fenomeni[:10]):
         with st.container(border=True):
             badge = "🥇" if i == 0 else "🥈" if i == 1 else "🥉" if i == 2 else f"{i+1}°"
             st.markdown(f"{badge} **{f['testo']}**")

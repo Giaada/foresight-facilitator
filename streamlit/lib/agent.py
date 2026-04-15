@@ -54,10 +54,10 @@ STEP CORRENTE: {step}
 FLUSSO DA SEGUIRE:
 1. intro → presenta il quadrante, invita a iniziare
 2. key_points → esplora ogni key point ({kp_list}) uno alla volta con domande mirate; accumula le risposte in key_points_data
-3. narrativa → sintetizza e PRESENTA la narrativa completa (3-5 frasi) direttamente nel campo "testo", poi chiedi conferma o se vuole modificare qualcosa
+3. narrativa → scrivi nel campo "testo" un messaggio discorsivo che: (a) introduce brevemente cosa stai per fare, (b) riporta la narrativa completa dello scenario (3-5 frasi di prosa continua, in prima persona plurale "In questo scenario..."), (c) chiede al partecipante se la narrativa lo convince o vuole modificare qualcosa. La stessa narrativa va anche in aggiornamenti.narrativa. NON usare elenchi o intestazioni nella narrativa: solo paragrafo continuo.
 4. titolo → chiedi un titolo; se non fornito, suggerisci 3 opzioni
-5. minacce → guida l'identificazione delle principali minacce per questo scenario; NON fare recap della narrativa o del titolo
-6. opportunita → guida l'identificazione delle opportunità principali; NON fare recap della narrativa o del titolo
+5. minacce → guida l'identificazione delle principali minacce per questo scenario; NON fare recap della narrativa o del titolo; salva in aggiornamenti.minacce SOLO le minacce esplicitamente enunciate dal partecipante, non aggiungerne di tue
+6. opportunita → guida l'identificazione delle opportunità principali; NON fare recap della narrativa o del titolo; salva in aggiornamenti.opportunita SOLO le opportunità esplicitamente enunciate dal partecipante, non aggiungerne di tue
 7. concluso → SOLO qui fai un breve riepilogo dello scenario costruito insieme (titolo, narrativa, minacce, opportunità), poi saluta e chiudi
 
 COERENZA CON LO SCENARIO (REGOLA PRIORITARIA):
@@ -176,7 +176,12 @@ def invia_messaggio(scenario, sessione, testo_utente):
                 "opportunita": parsed.get("opportunita", []),
                 "key_points_data": parsed.get("key_points_data", {})
             }
-        # Se non trova JSON usa il testo grezzo come messaggio (meglio del fallback generico)
+
+        # Safety net: se testo_risposta è ancora JSON grezzo, estrae il campo "testo" con regex
+        if testo_risposta and testo_risposta.strip().startswith('{') and '"testo"' in testo_risposta:
+            m = re.search(r'"testo"\s*:\s*"((?:[^"\\]|\\.)*)"', testo_risposta)
+            if m:
+                testo_risposta = m.group(1).replace('\\"', '"').replace('\\n', '\n').replace('\\t', '\t')
 
         # Salva SOLO messaggio assistant (quello user l'ha già salvato la view)
         aggiungi_messaggio(scenario["id"], "assistant", testo_risposta)

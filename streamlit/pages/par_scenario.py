@@ -1,6 +1,8 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import sys
+import re
+import json as _json
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -324,12 +326,21 @@ else:
         chat_container = st.container(height=450)
         with chat_container:
             for msg in messaggi:
+                contenuto = msg["contenuto"]
+                # Safety net: se il contenuto salvato è JSON grezzo, estrae il campo testo
+                if contenuto and contenuto.strip().startswith('{') and '"testo"' in contenuto:
+                    try:
+                        contenuto = _json.loads(contenuto).get("testo") or contenuto
+                    except Exception:
+                        m = re.search(r'"testo"\s*:\s*"((?:[^"\\]|\\.)*)"', contenuto)
+                        if m:
+                            contenuto = m.group(1).replace('\\"', '"').replace('\\n', '\n')
                 if msg["ruolo"] == "assistant":
                     with st.chat_message("assistant", avatar="🤖"):
-                        st.markdown(msg["contenuto"])
+                        st.markdown(contenuto)
                 elif msg["ruolo"] == "user":
                     with st.chat_message("user", avatar="🙋"):
-                        st.markdown(msg["contenuto"])
+                        st.markdown(contenuto)
     
         # Avviso e bottone se l'agente non ha ancora risposto all'ultimo messaggio
         if messaggi and messaggi[-1]["ruolo"] == "user" and sc["step_corrente"] != "concluso":

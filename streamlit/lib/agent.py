@@ -157,9 +157,9 @@ def invia_messaggio(scenario, sessione, testo_utente):
             model="claude-sonnet-4-6",
             max_tokens=1024,
             system=sistema_prompt(scenario, sessione, key_points),
-            messages=history,
+            messages=history + [{"role": "assistant", "content": "{"}],
         )
-        testo_raw = risposta.content[0].text
+        testo_raw = "{" + risposta.content[0].text
 
         testo_risposta = testo_raw
         nuovo_step = None
@@ -177,11 +177,22 @@ def invia_messaggio(scenario, sessione, testo_utente):
                 "key_points_data": parsed.get("key_points_data", {})
             }
 
-        # Safety net: se testo_risposta è ancora JSON grezzo, estrae il campo "testo" con regex
-        if testo_risposta and testo_risposta.strip().startswith('{') and '"testo"' in testo_risposta:
-            m = re.search(r'"testo"\s*:\s*"((?:[^"\\]|\\.)*)"', testo_risposta)
-            if m:
-                testo_risposta = m.group(1).replace('\\"', '"').replace('\\n', '\n').replace('\\t', '\t')
+        # Safety net: se _parse_json ha fallito ma il testo sembra JSON, riprova estraendo
+        # sia il campo "testo" che gli "aggiornamenti" con un approccio più aggressivo
+        if not parsed and testo_raw.strip().startswith('{'):
+            m_json = re.search(r'\{.*\}', testo_raw, re.DOTALL)
+            if m_json:
+                try:
+                    import json as _json
+                    fallback = _json.loads(m_json.group(0))
+                    testo_risposta = fallback.get("testo") or testo_risposta
+                    nuovo_step = fallback.get("nuovo_step")
+                    agg = fallback.get("aggiornamenti") or {}
+                except Exception:
+                    # ultimo tentativo: estrai almeno il campo testo con regex
+                    m = re.search(r'"testo"\s*:\s*"((?:[^"\\]|\\.)*)"', testo_raw)
+                    if m:
+                        testo_risposta = m.group(1).replace('\\"', '"').replace('\\n', '\n').replace('\\t', '\t')
 
         # Salva SOLO messaggio assistant (quello user l'ha già salvato la view)
         aggiungi_messaggio(scenario["id"], "assistant", testo_risposta)

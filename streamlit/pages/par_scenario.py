@@ -185,19 +185,22 @@ if is_group_phase:
 
             if locked_by == partecipante_id:
                 st.success("Sei il Relatore. Puoi modificare la versione finale per il gruppo.")
-                if st.button("🔓 Cedi il controllo / Chiudi Editor", type="primary"):
+                if st.button("🔓 Cedi il controllo", type="primary"):
                     aggiorna_scenario(sc_live["id"], locked_by_partecipante_id=None)
                     st.rerun()
                 
                 with st.form(f"form_finale_{sc_live['id']}"):
+                    st.caption("I campi sono pre-compilati con la sintesi dell'AI. Modificali liberamente per rispecchiare la visione del gruppo.")
                     nuovo_t = st.text_input("Titolo Definitivo", value=t_fin)
                     nuovo_n = st.text_area("Narrativa Definitiva", value=n_fin, height=200)
-                    
+
                     c1, c2 = st.columns(2)
                     with c1:
-                        nuovo_m = st.text_area("Minacce (una per riga)", value=m_fin, height=150)
+                        nuovo_m = st.text_area("Minacce (una per riga)", value=m_fin, height=150,
+                                               help="Scrivi o modifica le minacce, una per riga. Puoi ricopiare quelle emerse nella chat individuale o aggiungerne di nuove.")
                     with c2:
-                        nuovo_o = st.text_area("Opportunità (una per riga)", value=o_fin, height=150)
+                        nuovo_o = st.text_area("Opportunità (una per riga)", value=o_fin, height=150,
+                                               help="Scrivi o modifica le opportunità, una per riga. Puoi ricopiare quelle emerse nella chat individuale o aggiungerne di nuove.")
                     
                     if st.form_submit_button("💾 Salva Modifiche"):
                         aggiorna_scenario(
@@ -352,6 +355,12 @@ else:
                     with st.spinner("L'agente sta elaborando..."):
                         invia_messaggio(sc, sessione, "[continua]")
                     st.rerun()
+
+        # Banner contestuale per minacce/opportunità
+        if sc["step_corrente"] == "minacce":
+            st.info("💡 **Fase: Minacce** — L'agente ti chiederà quali rischi e minacce vedi in questo scenario. Scrivili qui sotto nella chat, puoi elencarli tutti insieme o uno alla volta.")
+        elif sc["step_corrente"] == "opportunita":
+            st.info("💡 **Fase: Opportunità** — L'agente ti chiederà quali opportunità vedi in questo scenario. Scrivile qui sotto nella chat, puoi elencarle tutte insieme o una alla volta.")
 
         # Input risposta gruppo
         if sc["step_corrente"] != "concluso":

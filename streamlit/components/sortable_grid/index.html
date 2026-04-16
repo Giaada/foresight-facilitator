@@ -183,11 +183,20 @@
         grid.appendChild(card);
       });
 
+      // Scroll target: prova il parent window (stesso origin in Streamlit), fallback al document
+      var scrollTarget;
+      try { scrollTarget = window.parent.document.scrollingElement || window.parent.document.body; }
+      catch(e) { scrollTarget = document.scrollingElement || document.body; }
+
       if (sortable) sortable.destroy();
       sortable = Sortable.create(grid, {
         animation: 140,
         ghostClass: "sortable-ghost",
         chosenClass: "sortable-chosen",
+        scroll: scrollTarget,
+        scrollSensitivity: 80,
+        scrollSpeed: 12,
+        bubbleScroll: true,
         onEnd: function () {
           var newOrder = Array.from(grid.querySelectorAll(".card"))
             .map(function (c) { return c.dataset.id; });

@@ -196,9 +196,11 @@ if is_group_phase:
 
                     c1, c2 = st.columns(2)
                     with c1:
+                        st.caption("Riportate le minacce condivise dal gruppo, una per riga.")
                         nuovo_m = st.text_area("Minacce (una per riga)", value=m_fin, height=150,
                                                help="Scrivi o modifica le minacce, una per riga. Puoi ricopiare quelle emerse nella chat individuale o aggiungerne di nuove.")
                     with c2:
+                        st.caption("Riportate le opportunità condivise dal gruppo, una per riga.")
                         nuovo_o = st.text_area("Opportunità (una per riga)", value=o_fin, height=150,
                                                help="Scrivi o modifica le opportunità, una per riga. Puoi ricopiare quelle emerse nella chat individuale o aggiungerne di nuove.")
                     

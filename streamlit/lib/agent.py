@@ -158,9 +158,9 @@ def invia_messaggio(scenario, sessione, testo_utente):
             model="claude-sonnet-4-6",
             max_tokens=1024,
             system=sistema_prompt(scenario, sessione, key_points),
-            messages=history + [{"role": "assistant", "content": "{"}],
+            messages=history,
         )
-        testo_raw = "{" + risposta.content[0].text
+        testo_raw = risposta.content[0].text
 
         testo_risposta = testo_raw
         nuovo_step = None

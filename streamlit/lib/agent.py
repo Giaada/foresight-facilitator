@@ -253,19 +253,25 @@ def invia_messaggio(scenario, sessione, testo_utente):
         # Salva SOLO messaggio assistant (quello user l'ha già salvato la view)
         aggiungi_messaggio(scenario["id"], "assistant", testo_risposta)
 
-        # Aggiorna scenario
+        # Aggiorna scenario.
+        # Ogni campo viene scritto nel DB SOLO durante lo step dedicato: il modello
+        # è istruito a ripetere tutti gli aggiornamenti ad ogni messaggio (per la UI),
+        # ma accettare quelle ripetizioni su step sbagliati può sovrascrivere dati
+        # corretti con valori errati (es. modello mette testo discorsivo in narrativa
+        # durante lo step titolo).
+        step = scenario.get("step_corrente", "")
         updates = {}
         if nuovo_step and nuovo_step in STEP_ORDINE:
             updates["step_corrente"] = nuovo_step
-        if agg.get("narrativa"):
+        if agg.get("narrativa") and step == "narrativa":
             updates["narrativa"] = agg["narrativa"]
-        if agg.get("titolo"):
+        if agg.get("titolo") and step == "titolo":
             updates["titolo"] = agg["titolo"]
-        if agg.get("minacce"):
+        if agg.get("minacce") and step == "minacce":
             updates["minacce"] = agg["minacce"]
-        if agg.get("opportunita"):
+        if agg.get("opportunita") and step == "opportunita":
             updates["opportunita"] = agg["opportunita"]
-        if agg.get("key_points_data"):
+        if agg.get("key_points_data") and step == "key_points":
             kpd = scenario.get("key_points_data", {}) or {}
             kpd.update(agg["key_points_data"])
             updates["key_points_data"] = kpd

@@ -101,14 +101,33 @@ RISPOSTA — REGOLE ASSOLUTE:
 }}"""
 
 
+def _extract_testo(contenuto):
+    """Estrae il testo leggibile da un messaggio che contiene JSON grezzo."""
+    if not contenuto or not contenuto.strip().startswith('{') or '"testo"' not in contenuto:
+        return contenuto
+    try:
+        return json.loads(contenuto).get("testo") or contenuto
+    except Exception:
+        m = re.search(r'"testo"\s*:\s*"((?:[^"\\]|\\.)*)"', contenuto)
+        if m:
+            return m.group(1).replace('\\"', '"').replace('\\n', '\n').replace('\\t', '\t')
+    return contenuto
+
+
 def _build_history(messaggi_db, testo_utente):
     """
     Costruisce la history per l'API Anthropic.
     L'API richiede che il primo messaggio sia sempre 'user'.
     Se la history dal DB inizia con 'assistant' (messaggio di benvenuto),
     aggiungiamo un messaggio utente fittizio di apertura.
+    I messaggi assistant con JSON grezzo (es. da risposte troncate) vengono
+    ripuliti per non confondere il modello.
     """
-    msgs = [{"role": m["ruolo"], "content": m["contenuto"]} for m in messaggi_db]
+    msgs = []
+    for m in messaggi_db:
+        content = _extract_testo(m["contenuto"]) if m["ruolo"] == "assistant" else m["contenuto"]
+        msgs.append({"role": m["ruolo"], "content": content})
+
     msgs.append({"role": "user", "content": testo_utente})
 
     # Garantisce alternanza corretta user/assistant richiesta dall'API
@@ -160,7 +179,7 @@ def invia_messaggio(scenario, sessione, testo_utente):
     try:
         risposta = client.messages.create(
             model="claude-sonnet-4-6",
-            max_tokens=1024,
+            max_tokens=4096,
             system=sistema_prompt(scenario, sessione, key_points),
             messages=history,
         )

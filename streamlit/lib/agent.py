@@ -82,8 +82,12 @@ REGOLE PER aggiornamenti (FONDAMENTALE - segui sempre):
 - Ad OGNI tuo messaggio DEVI SEMPRE RIPETERE tutti i dati accumulati precedentemente (narrativa parziale, minacce, etc.) dentro l'oggetto 'aggiornamenti'. Non mettere mai null se hai già raccolto una narrativa o un titolo: COPIALO e ripetilo per mantenere l'interfaccia sincronizzata!
 - Step key_points: salva e accumula in tempo reale tutte le risposte ricevute in aggiornamenti.key_points_data usando ESATTAMENTE i nomi dei key points come chiavi ({kp_list}), non nomi generici come "nome_key_point_1".
 
-RISPOSTA:
-Devi rispondere ESCLUSIVAMENTE con UN SOLO OGGETTO JSON. ASSOLUTAMENTE NESSUN TESTO FUORI DAL JSON, NO "Ecco il JSON", NO "\`\`\`json". SOLO ED ESCLUSIVAMENTE IL CARATTERE {{ SEGUITO DAI JSON DATA.
+RISPOSTA — REGOLE ASSOLUTE:
+- INIZIA LA RISPOSTA DIRETTAMENTE CON {{ — NESSUN TESTO PRIMA, NESSUN MARKDOWN, NESSUN ```json
+- TERMINA CON }}
+- NESSUN CARATTERE AL DI FUORI DEL JSON
+- Se sei nello step "narrativa", aggiornamenti.narrativa DEVE contenere la narrativa per esteso (non null): è obbligatorio, altrimenti il lavoro del partecipante va perso.
+
 {{
   "testo": "il vero messaggio discorsivo che leggerà il partecipante",
   "nuovo_step": "nome del prossimo step se l'utente ti ha autorizzato ad avanzare, altrimenti null",
@@ -194,6 +198,19 @@ def invia_messaggio(scenario, sessione, testo_utente):
                     m = re.search(r'"testo"\s*:\s*"((?:[^"\\]|\\.)*)"', testo_raw)
                     if m:
                         testo_risposta = m.group(1).replace('\\"', '"').replace('\\n', '\n').replace('\\t', '\t')
+
+        # Fallback narrativa: il modello a volte scrive la narrativa nel campo "testo"
+        # ma dimentica di duplicarla in aggiornamenti.narrativa.
+        # Se siamo nello step "narrativa" e il campo è vuoto, la estraiamo dal testo.
+        if scenario.get("step_corrente") == "narrativa" and not agg.get("narrativa") and testo_risposta:
+            nar_match = re.search(r'(In questo scenario[\s,\u2019\u2018].{80,})', testo_risposta, re.DOTALL | re.IGNORECASE)
+            if nar_match:
+                nar_text = nar_match.group(1)
+                stop = re.search(r'\n\n', nar_text)
+                if stop and stop.start() > 100:
+                    nar_text = nar_text[:stop.start()]
+                if len(nar_text.strip()) > 80:
+                    agg["narrativa"] = nar_text.strip()
 
         # Salva SOLO messaggio assistant (quello user l'ha già salvato la view)
         aggiungi_messaggio(scenario["id"], "assistant", testo_risposta)

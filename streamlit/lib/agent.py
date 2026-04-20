@@ -29,6 +29,14 @@ def descrivi_quadrante(quadrante, d1_nome, d1_pos, d1_neg, d2_nome, d2_pos, d2_n
 
 
 def sistema_prompt(scenario, sessione, key_points):
+    """
+    Restituisce il system prompt come lista di blocchi per l'API Anthropic.
+    Il primo blocco (statico per tutta la sessione) è marcato con cache_control:
+    i token in cache vengono addebitati al 10% del normale, riducendo il TPM
+    consumato e abbassando la latenza per le chiamate successive.
+    Il secondo blocco contiene solo lo step corrente (l'unico elemento variabile)
+    e non viene cachato.
+    """
     descrizione = descrivi_quadrante(
         scenario["quadrante"],
         sessione.get("driver1_nome"), sessione.get("driver1_pos"), sessione.get("driver1_neg"),
@@ -40,7 +48,7 @@ def sistema_prompt(scenario, sessione, key_points):
     kp_primo = key_points[0] if key_points else "Key Point 1"
     kp_esempio = ", ".join(f'"{kp}": "sintesi della risposta del partecipante"' for kp in (key_points[:2] if key_points else ["Key Point 1"]))
 
-    return f"""Sei un esperto facilitatore di Strategic Foresight.
+    static_text = f"""Sei un esperto facilitatore di Strategic Foresight.
 Stai guidando la costruzione di uno scenario futuro.
 
 CONTESTO:
@@ -49,9 +57,8 @@ CONTESTO:
 - Scenario assegnato: {descrizione}
 
 KEY POINTS da esplorare: {kp_list}
-STEP CORRENTE: {step}
 
-FLUSSO DA SEGUIRE:
+FLUSSO DA SEGUIRE (lo step corrente è indicato alla fine di questo prompt):
 1. intro → presenta il quadrante in modo coinvolgente e fai subito la prima domanda aperta sul primo key point; non spiegare l'intero percorso in anticipo
 2. key_points → esplora ogni key point ({kp_list}) uno alla volta con domande aperte; il tuo compito è far emergere il pensiero del partecipante, non anticiparlo o sintetizzarlo tu; fai domande di approfondimento ("Perché?", "Come immagini che accada?", "Chi sono gli attori coinvolti?") prima di considerare un key point esaurito; accumula le risposte in key_points_data
 3. narrativa → scrivi nel campo "testo" un messaggio discorsivo che: (a) introduce brevemente cosa stai per fare, (b) riporta la narrativa completa dello scenario (3-5 frasi di prosa continua, in prima persona plurale "In questo scenario..."), (c) chiede al partecipante se la narrativa lo convince o vuole modificare qualcosa. La stessa narrativa va anche in aggiornamenti.narrativa. NON usare elenchi o intestazioni nella narrativa: solo paragrafo continuo.
@@ -99,6 +106,18 @@ RISPOSTA — REGOLE ASSOLUTE:
     "key_points_data": {{{kp_esempio}}}
   }}
 }}"""
+
+    return [
+        {
+            "type": "text",
+            "text": static_text,
+            "cache_control": {"type": "ephemeral"},
+        },
+        {
+            "type": "text",
+            "text": f"STEP CORRENTE: {step}",
+        },
+    ]
 
 
 def _extract_testo(contenuto):

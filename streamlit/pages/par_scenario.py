@@ -356,10 +356,8 @@ else:
                         invia_messaggio(sc, sessione, "[continua]")
                     st.rerun()
 
-        # Banner contestuale per minacce/opportunità
-        if sc["step_corrente"] == "minacce":
-            st.info("💡 **Fase: Minacce** — L'agente ti chiederà quali rischi e minacce vedi in questo scenario. Scrivili qui sotto nella chat, puoi elencarli tutti insieme o uno alla volta.")
-        elif sc["step_corrente"] == "opportunita":
+        # Banner contestuale per opportunità
+        if sc["step_corrente"] == "opportunita":
             st.info("💡 **Fase: Opportunità** — L'agente ti chiederà quali opportunità vedi in questo scenario. Scrivile qui sotto nella chat, puoi elencarle tutte insieme o una alla volta.")
 
         # Input risposta gruppo

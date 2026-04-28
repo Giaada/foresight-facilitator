@@ -318,7 +318,42 @@ else:
     # ── Chat ──────────────────────────────────────────────────
     with col_chat:
         st.markdown("### 💬 Conversazione Autonoma con l'Agente")
-    
+
+        # ── Progress tracker ──────────────────────────────────
+        kps_sessione = sessione.get("key_points") or []
+        kpd = sc.get("key_points_data") or {}
+        kps_esplorati = sum(1 for kp in kps_sessione if kp in kpd and kpd[kp])
+
+        STEP_TRACKER = [
+            ("key_points", f"Key Points ({kps_esplorati}/{len(kps_sessione)})"),
+            ("narrativa", "Narrativa"),
+            ("titolo", "Titolo"),
+            ("minacce", "Minacce"),
+            ("opportunita", "Opportunità"),
+        ]
+        _step_corrente = sc["step_corrente"]
+        try:
+            _current_idx = [s[0] for s in STEP_TRACKER].index(_step_corrente)
+        except ValueError:
+            _current_idx = len(STEP_TRACKER) if _step_corrente == "concluso" else -1
+
+        _pills = ""
+        for _i, (_sid, _label) in enumerate(STEP_TRACKER):
+            if _i < _current_idx or _step_corrente == "concluso":
+                _pills += f'<div style="background:#22c55e;color:white;border-radius:999px;padding:4px 12px;font-size:0.75rem;font-weight:600;">✓ {_label}</div>'
+            elif _i == _current_idx:
+                _pills += f'<div style="background:#3b82f6;color:white;border-radius:999px;padding:4px 12px;font-size:0.75rem;font-weight:600;">● {_label}</div>'
+            else:
+                _pills += f'<div style="background:#f3f4f6;color:#9ca3af;border-radius:999px;padding:4px 12px;font-size:0.75rem;">○ {_label}</div>'
+            if _i < len(STEP_TRACKER) - 1:
+                _pills += '<div style="color:#d1d5db;font-size:0.9rem;line-height:1;">→</div>'
+
+        components.html(f"""<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:transparent;">
+<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px 0;">
+  {_pills}
+</div></body></html>""", height=44)
+
         messaggi = get_messaggi(sc["id"])
     
         # Avvia agente se nessun messaggio
@@ -404,18 +439,6 @@ else:
             sc_live = get_scenario(scenario_id_for_panel)
             if not sc_live:
                 return
-    
-            STEP_LABEL = {
-                "intro": "🟡 Introduzione",
-                "key_points": "🔵 Key Points",
-                "narrativa": "🟣 Narrativa",
-                "titolo": "🟠 Titolo",
-                "minacce": "🔴 Minacce",
-                "opportunita": "🟢 Opportunità",
-                "concluso": "✅ Completato",
-            }
-            step_label = STEP_LABEL.get(sc_live["step_corrente"], sc_live["step_corrente"])
-            st.caption(f"Step Individuale: {step_label}")
     
             with st.container(border=True):
                 st.markdown("##### 📝 Scenario in costruzione")

@@ -109,6 +109,10 @@ if stato == "scenario_planning":
                         st.markdown("**Minacce:** " + ", ".join(s_ind["minacce"]))
                     if s_ind.get("opportunita"):
                         st.markdown("**Opportunità:** " + ", ".join(s_ind["opportunita"]))
+                    if is_done:
+                        if st.button(f"↩️ Riapri lavoro di {nome_par}", key=f"reset_{s_ind['id']}", use_container_width=True):
+                            aggiorna_scenario(s_ind["id"], step_corrente="opportunita")
+                            st.rerun()
 
             st.divider()
 

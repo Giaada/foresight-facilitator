@@ -415,9 +415,22 @@ else:
 
             st.divider()
             st.caption("Quando hai finito di fornire idee a Claude e ti ritieni soddisfatto/a per il tuo quadrante:")
-            if st.button("🏁 Dichiara Lavoro Individuale Concluso", type="primary", use_container_width=True):
-                aggiorna_scenario(sc["id"], step_corrente="concluso")
-                st.rerun()
+            if not st.session_state.get("confirm_concluso"):
+                if st.button("🏁 Dichiara Lavoro Individuale Concluso", type="primary", use_container_width=True):
+                    st.session_state["confirm_concluso"] = True
+                    st.rerun()
+            else:
+                st.warning("⚠️ Sei sicuro/a? Non potrai più continuare la conversazione con l'agente.")
+                col_si, col_no = st.columns(2)
+                with col_si:
+                    if st.button("✅ Sì, ho finito", type="primary", use_container_width=True, key="btn_concluso_si"):
+                        aggiorna_scenario(sc["id"], step_corrente="concluso")
+                        st.session_state["confirm_concluso"] = False
+                        st.rerun()
+                with col_no:
+                    if st.button("↩️ No, continuo", use_container_width=True, key="btn_concluso_no"):
+                        st.session_state["confirm_concluso"] = False
+                        st.rerun()
         else:
             st.success("🎉 Scenario Individuale completato! Ottimo lavoro.")
             st.info("Attendi che tutti i componenti finiscano. Poi il facilitatore genererà la Bozza Consolidata in cui discuterete in Gruppo!")

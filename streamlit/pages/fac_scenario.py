@@ -161,15 +161,35 @@ if stato == "scenario_planning":
         else:
             st.success("Tutte le bozze sono pronte!")
 
-        if st.button(
-            "▶️ Avanza alla Fase di Gruppo",
-            type="primary",
-            use_container_width=True,
-            disabled=(n_bozze == 0),
-        ):
-            aggiorna_sessione(sid, stato="scenario_planning_gruppo")
-            st.success("Sessione avanzata alla Fase di Gruppo!")
-            st.rerun()
+        rimasti = tot_indiv - completati_tot
+        if not st.session_state.get("confirm_avanza_gruppo"):
+            if rimasti > 0 and n_bozze > 0:
+                st.warning(f"⚠️ {rimasti} partecipante/i non ha ancora concluso il lavoro individuale.")
+            if st.button(
+                "▶️ Avanza alla Fase di Gruppo",
+                type="primary",
+                use_container_width=True,
+                disabled=(n_bozze == 0),
+            ):
+                if rimasti > 0:
+                    st.session_state["confirm_avanza_gruppo"] = True
+                    st.rerun()
+                else:
+                    aggiorna_sessione(sid, stato="scenario_planning_gruppo")
+                    st.success("Sessione avanzata alla Fase di Gruppo!")
+                    st.rerun()
+        else:
+            st.error(f"⚠️ CONFERMA: {rimasti} partecipante/i non ha completato il proprio scenario. Avanzando ora non potranno più modificarlo.")
+            col_avanza, col_back = st.columns(2)
+            with col_avanza:
+                if st.button("▶️ Avanza comunque", type="primary", use_container_width=True, key="btn_avanza_comunque"):
+                    st.session_state["confirm_avanza_gruppo"] = False
+                    aggiorna_sessione(sid, stato="scenario_planning_gruppo")
+                    st.rerun()
+            with col_back:
+                if st.button("↩️ Aspetta ancora", use_container_width=True, key="btn_aspetta"):
+                    st.session_state["confirm_avanza_gruppo"] = False
+                    st.rerun()
 
 elif stato in ("scenario_planning_gruppo", "concluso"):
     if stato == "scenario_planning_gruppo":

@@ -398,8 +398,8 @@ def get_voti_aggregati(sessione_id):
 # ── Scenari ───────────────────────────────────────────────
 
 def crea_scenari(sessione_id):
-    quadranti = [(1, "++"), (2, "+-"), (3, "-+"), (4, "--")]
-    quad_map = {1: "++", 2: "+-", 3: "-+", 4: "--"}
+    quadranti = [(1, "-+"), (2, "++"), (3, "+-"), (4, "--")]
+    quad_map = {1: "-+", 2: "++", 3: "+-", 4: "--"}
 
     exec_query("DELETE FROM scenario WHERE sessione_id = ?", (sessione_id,))
 

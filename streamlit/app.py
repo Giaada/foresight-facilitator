@@ -101,7 +101,6 @@ elif ruolo == "partecipante":
                 "🔭 Horizon Scanning",
                 "⚙️ Elaborazione Assi",
                 "👤 Scenario Individuale",
-                "⚠️ Minacce e Opportunità",
                 "🤝 Discussione di Gruppo",
                 "📄 Report Finale"
             ]

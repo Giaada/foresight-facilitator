@@ -319,41 +319,6 @@ else:
     with col_chat:
         st.markdown("### 💬 Conversazione Autonoma con l'Agente")
 
-        # ── Progress tracker ──────────────────────────────────
-        kps_sessione = sessione.get("key_points") or []
-        kpd = sc.get("key_points_data") or {}
-        kps_esplorati = sum(1 for kp in kps_sessione if kp in kpd and kpd[kp])
-
-        STEP_TRACKER = [
-            ("key_points", f"Key Points ({kps_esplorati}/{len(kps_sessione)})"),
-            ("narrativa", "Narrativa"),
-            ("titolo", "Titolo"),
-            ("minacce", "Minacce"),
-            ("opportunita", "Opportunità"),
-        ]
-        _step_corrente = sc["step_corrente"]
-        try:
-            _current_idx = [s[0] for s in STEP_TRACKER].index(_step_corrente)
-        except ValueError:
-            _current_idx = len(STEP_TRACKER) if _step_corrente == "concluso" else -1
-
-        _pills = ""
-        for _i, (_sid, _label) in enumerate(STEP_TRACKER):
-            if _i < _current_idx or _step_corrente == "concluso":
-                _pills += f'<div style="background:#22c55e;color:white;border-radius:999px;padding:4px 12px;font-size:0.75rem;font-weight:600;">✓ {_label}</div>'
-            elif _i == _current_idx:
-                _pills += f'<div style="background:#3b82f6;color:white;border-radius:999px;padding:4px 12px;font-size:0.75rem;font-weight:600;">● {_label}</div>'
-            else:
-                _pills += f'<div style="background:#f3f4f6;color:#9ca3af;border-radius:999px;padding:4px 12px;font-size:0.75rem;">○ {_label}</div>'
-            if _i < len(STEP_TRACKER) - 1:
-                _pills += '<div style="color:#d1d5db;font-size:0.9rem;line-height:1;">→</div>'
-
-        components.html(f"""<!DOCTYPE html><html><head><meta charset="utf-8"></head>
-<body style="margin:0;padding:0;background:transparent;">
-<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px 0;">
-  {_pills}
-</div></body></html>""", height=44)
-
         messaggi = get_messaggi(sc["id"])
     
         # Avvia agente se nessun messaggio
@@ -408,11 +373,46 @@ else:
                 aggiungi_messaggio(sc["id"], "user", testo)
                 with st.chat_message("user", avatar="🙋"):
                     st.markdown(testo)
-                
+
                 with st.spinner("L'agente sta elaborando..."):
                     _, nuovo_step = invia_messaggio(sc, sessione, testo)
                 st.rerun()
-                
+
+            # ── Progress tracker ──────────────────────────────
+            _kps_sessione = sessione.get("key_points") or []
+            _kpd = sc.get("key_points_data") or {}
+            _kps_esplorati = sum(1 for kp in _kps_sessione if kp in _kpd and _kpd[kp])
+
+            _STEP_TRACKER = [
+                ("key_points", f"Key Points ({_kps_esplorati}/{len(_kps_sessione)})"),
+                ("narrativa", "Narrativa"),
+                ("titolo", "Titolo"),
+                ("minacce", "Minacce"),
+                ("opportunita", "Opportunità"),
+            ]
+            _step_c = sc["step_corrente"]
+            try:
+                _cur_idx = [s[0] for s in _STEP_TRACKER].index(_step_c)
+            except ValueError:
+                _cur_idx = len(_STEP_TRACKER) if _step_c == "concluso" else -1
+
+            _pills = ""
+            for _i, (_sid, _label) in enumerate(_STEP_TRACKER):
+                if _i < _cur_idx or _step_c == "concluso":
+                    _pills += f'<div style="background:#22c55e;color:white;border-radius:999px;padding:4px 12px;font-size:0.75rem;font-weight:600;">✓ {_label}</div>'
+                elif _i == _cur_idx:
+                    _pills += f'<div style="background:#3b82f6;color:white;border-radius:999px;padding:4px 12px;font-size:0.75rem;font-weight:600;">● {_label}</div>'
+                else:
+                    _pills += f'<div style="background:#f3f4f6;color:#9ca3af;border-radius:999px;padding:4px 12px;font-size:0.75rem;">○ {_label}</div>'
+                if _i < len(_STEP_TRACKER) - 1:
+                    _pills += '<div style="color:#d1d5db;font-size:0.9rem;line-height:1;">→</div>'
+
+            components.html(f"""<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:transparent;">
+<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:6px 0;">
+  {_pills}
+</div></body></html>""", height=44)
+
             st.divider()
             st.caption("Quando hai finito di fornire idee a Claude e ti ritieni soddisfatto/a per il tuo quadrante:")
             if st.button("🏁 Dichiara Lavoro Individuale Concluso", type="primary", use_container_width=True):

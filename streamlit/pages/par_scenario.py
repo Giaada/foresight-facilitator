@@ -387,6 +387,8 @@ else:
                 ("key_points", f"Key Points ({_kps_esplorati}/{len(_kps_sessione)})"),
                 ("narrativa", "Narrativa"),
                 ("titolo", "Titolo"),
+                ("minacce", "Minacce"),
+                ("opportunita", "Opportunità"),
             ]
             _step_c = sc["step_corrente"]
             try:

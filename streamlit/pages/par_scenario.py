@@ -411,7 +411,7 @@ else:
 <body style="margin:0;padding:0;background:transparent;">
 <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:6px 0;">
   {_pills}
-</div></body></html>""", height=44)
+</div></body></html>""", height=56)
 
             st.divider()
             st.caption("Quando hai finito di fornire idee a Claude e ti ritieni soddisfatto/a per il tuo quadrante:")

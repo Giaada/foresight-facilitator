@@ -133,6 +133,50 @@ if st.button("💾 Salva Driver", use_container_width=True):
 
 st.divider()
 
+# ── Temi strategici (Key Points) ─────────────────────────
+st.subheader("🔑 Temi strategici da esplorare")
+st.caption("Questi sono i temi che l'agente esplorerà con ogni partecipante durante lo Scenario Planning. Puoi confermarli o modificarli prima di avviare.")
+
+kps_attuali = sessione.get("key_points") or []
+
+if "kp_edit_list" not in st.session_state:
+    st.session_state["kp_edit_list"] = list(kps_attuali)
+
+kp_list = st.session_state["kp_edit_list"]
+
+for i, kp in enumerate(kp_list):
+    col_kp, col_del = st.columns([10, 1])
+    with col_kp:
+        nuovo_val = st.text_input(
+            f"Tema {i+1}",
+            value=kp,
+            key=f"kp_input_{i}",
+            label_visibility="collapsed",
+        )
+        kp_list[i] = nuovo_val
+    with col_del:
+        if st.button("✕", key=f"kp_del_{i}", help="Rimuovi tema"):
+            kp_list.pop(i)
+            st.rerun()
+
+col_add, col_save_kp = st.columns([3, 1])
+with col_add:
+    if st.button("＋ Aggiungi tema", use_container_width=True):
+        kp_list.append("")
+        st.rerun()
+with col_save_kp:
+    if st.button("💾 Salva temi", use_container_width=True, type="primary"):
+        puliti = [k.strip() for k in kp_list if k.strip()]
+        if not puliti:
+            st.error("Inserisci almeno un tema.")
+        else:
+            aggiorna_sessione(sid, key_points=puliti)
+            st.session_state["kp_edit_list"] = puliti
+            st.success("Temi salvati!")
+            st.rerun()
+
+st.divider()
+
 # ── Anteprima matrice 2×2 ─────────────────────────────────
 sessione = get_sessione_by_id(sid)  # ricarica dopo eventuale salvataggio
 

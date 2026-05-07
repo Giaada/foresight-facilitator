@@ -99,9 +99,11 @@ def executescript(script):
         conn = get_conn()
         try:
             cur = conn.cursor()
-            cur.execute(script)
-        except Exception:
-            pass
+            for stmt in [s.strip() for s in script.split(';') if s.strip()]:
+                try:
+                    cur.execute(stmt)
+                except Exception:
+                    pass
         finally:
             conn.close()
     else:

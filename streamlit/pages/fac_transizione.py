@@ -200,9 +200,9 @@ if sessione.get("driver1_nome") and sessione.get("driver2_nome"):
     st.caption("Assegna ogni partecipante a uno dei 4 scenari")
 
     GRUPPI_LABEL = {
-        1: "Gruppo 1 (++)",
-        2: "Gruppo 2 (+-)",
-        3: "Gruppo 3 (-+)",
+        1: "Gruppo 1 (-+)",
+        2: "Gruppo 2 (++)",
+        3: "Gruppo 3 (+-)",
         4: "Gruppo 4 (--)",
     }
     partecipanti = get_partecipanti(sid)

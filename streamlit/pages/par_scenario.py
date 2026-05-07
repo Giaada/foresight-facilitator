@@ -378,40 +378,46 @@ else:
                     _, nuovo_step = invia_messaggio(sc, sessione, testo)
                 st.rerun()
 
-            # ── Progress tracker ──────────────────────────────
-            _kps_sessione = sessione.get("key_points") or []
-            _kpd = sc.get("key_points_data") or {}
-            _kps_esplorati = sum(1 for kp in _kps_sessione if kp in _kpd and _kpd[kp])
+            # ── Progress tracker (live, si aggiorna ogni 20s) ──
+            _sc_id_tracker = sc["id"]
+            _kps_sessione_tracker = sessione.get("key_points") or []
 
-            _STEP_TRACKER = [
-                ("key_points", f"Key Points ({_kps_esplorati}/{len(_kps_sessione)})"),
-                ("narrativa", "Narrativa"),
-                ("titolo", "Titolo"),
-                ("minacce", "Minacce"),
-                ("opportunita", "Opportunità"),
-            ]
-            _step_c = sc["step_corrente"]
-            try:
-                _cur_idx = [s[0] for s in _STEP_TRACKER].index(_step_c)
-            except ValueError:
-                _cur_idx = len(_STEP_TRACKER) if _step_c == "concluso" else -1
-
-            _pills = ""
-            for _i, (_sid, _label) in enumerate(_STEP_TRACKER):
-                if _i < _cur_idx or _step_c == "concluso":
-                    _pills += f'<div style="background:#22c55e;color:white;border-radius:999px;padding:4px 12px;font-size:0.75rem;font-weight:600;">✓ {_label}</div>'
-                elif _i == _cur_idx:
-                    _pills += f'<div style="background:#3b82f6;color:white;border-radius:999px;padding:4px 12px;font-size:0.75rem;font-weight:600;">● {_label}</div>'
-                else:
-                    _pills += f'<div style="background:#f3f4f6;color:#9ca3af;border-radius:999px;padding:4px 12px;font-size:0.75rem;">○ {_label}</div>'
-                if _i < len(_STEP_TRACKER) - 1:
-                    _pills += '<div style="color:#d1d5db;font-size:0.9rem;line-height:1;">→</div>'
-
-            components.html(f"""<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+            @st.fragment(run_every=20)
+            def _progress_tracker():
+                sc_t = get_scenario(_sc_id_tracker)
+                if not sc_t:
+                    return
+                _kpd = sc_t.get("key_points_data") or {}
+                _kps_esp = sum(1 for kp in _kps_sessione_tracker if kp in _kpd and _kpd[kp])
+                _STEPS = [
+                    ("key_points", f"Key Points ({_kps_esp}/{len(_kps_sessione_tracker)})"),
+                    ("narrativa", "Narrativa"),
+                    ("titolo", "Titolo"),
+                    ("minacce", "Minacce"),
+                    ("opportunita", "Opportunità"),
+                ]
+                _step_c = sc_t["step_corrente"]
+                try:
+                    _cur_idx = [s[0] for s in _STEPS].index(_step_c)
+                except ValueError:
+                    _cur_idx = len(_STEPS) if _step_c == "concluso" else -1
+                _pills = ""
+                for _i, (_step_id, _label) in enumerate(_STEPS):
+                    if _i < _cur_idx or _step_c == "concluso":
+                        _pills += f'<div style="background:#22c55e;color:white;border-radius:999px;padding:4px 12px;font-size:0.75rem;font-weight:600;">✓ {_label}</div>'
+                    elif _i == _cur_idx:
+                        _pills += f'<div style="background:#3b82f6;color:white;border-radius:999px;padding:4px 12px;font-size:0.75rem;font-weight:600;">● {_label}</div>'
+                    else:
+                        _pills += f'<div style="background:#f3f4f6;color:#9ca3af;border-radius:999px;padding:4px 12px;font-size:0.75rem;">○ {_label}</div>'
+                    if _i < len(_STEPS) - 1:
+                        _pills += '<div style="color:#d1d5db;font-size:0.9rem;line-height:1;">→</div>'
+                components.html(f"""<!DOCTYPE html><html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:transparent;">
 <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:6px 0;">
   {_pills}
 </div></body></html>""", height=56)
+
+            _progress_tracker()
 
             st.divider()
             st.caption("Quando hai finito di fornire idee a Claude e ti ritieni soddisfatto/a per il tuo quadrante:")

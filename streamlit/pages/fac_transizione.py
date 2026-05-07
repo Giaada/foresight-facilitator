@@ -139,8 +139,9 @@ st.caption("Questi sono i temi che l'agente esplorerà con ogni partecipante dur
 
 kps_attuali = sessione.get("key_points") or []
 
-if "kp_edit_list" not in st.session_state:
+if st.session_state.get("kp_edit_sid") != sid:
     st.session_state["kp_edit_list"] = list(kps_attuali)
+    st.session_state["kp_edit_sid"] = sid
 
 kp_list = st.session_state["kp_edit_list"]
 

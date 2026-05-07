@@ -153,6 +153,10 @@ def _build_history(messaggi_db, testo_utente):
     if msgs and msgs[0]["role"] == "assistant":
         msgs = [{"role": "user", "content": "[Sessione avviata]"}] + msgs
 
+    # Prefill: forza il modello a iniziare la risposta con '{',
+    # eliminando quasi completamente i casi di output non-JSON
+    msgs.append({"role": "assistant", "content": "{"})
+
     return msgs
 
 
@@ -202,7 +206,7 @@ def invia_messaggio(scenario, sessione, testo_utente):
             system=sistema_prompt(scenario, sessione, key_points),
             messages=history,
         )
-        testo_raw = risposta.content[0].text
+        testo_raw = "{" + risposta.content[0].text  # reintegra il prefill '{'
 
         testo_risposta = testo_raw
         nuovo_step = None
@@ -303,40 +307,44 @@ def invia_messaggio(scenario, sessione, testo_utente):
 
 
 def avvia_scenario(scenario, sessione):
-    """Messaggio iniziale dell'agente per un nuovo scenario."""
-    descrizione = descrivi_quadrante(
-        scenario["quadrante"],
-        sessione.get("driver1_nome"), sessione.get("driver1_pos"), sessione.get("driver1_neg"),
-        sessione.get("driver2_nome"), sessione.get("driver2_pos"), sessione.get("driver2_neg"),
-    )
+    """Messaggio iniziale dell'agente per un nuovo scenario.
+    Usa il system prompt completo (con caching) per coerenza con invia_messaggio
+    e per riscaldare la cache fin dalla prima chiamata.
+    """
     key_points = sessione.get("key_points", [])
     kp_str = ", ".join(key_points) if key_points else "tutti gli aspetti rilevanti"
+    primo_kp = key_points[0] if key_points else "il contesto generale"
 
-    prompt = f"""Genera il messaggio di benvenuto per lo Scenario {scenario['numero']}.
-Quadrante: {descrizione}
-Domanda di ricerca: "{sessione['domanda_ricerca']}"
-Orizzonte: {sessione['frame_temporale']}
-Key points da esplorare: {kp_str}
-
-Il messaggio deve:
-1. Presentare il quadrante in modo coinvolgente
-2. Spiegare brevemente il percorso (esploreremo insieme {kp_str})
-3. Fare la prima domanda sul primo key point: "{key_points[0] if key_points else 'il contesto generale'}"
-
-Rispondi SOLO con il testo del messaggio, in italiano."""
+    prompt = (
+        f"Sei nella fase intro. Genera il messaggio di benvenuto per lo Scenario {scenario['numero']}. "
+        f"Presenta il quadrante in modo coinvolgente, accenna che esploreremo insieme: {kp_str}, "
+        f'poi fai subito la prima domanda sul primo key point: "{primo_kp}". '
+        f"Segui il formato JSON del system prompt."
+    )
 
     client = _get_client()
-
     try:
         risposta = client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=512,
-            messages=[{"role": "user", "content": prompt}]
+            system=sistema_prompt(scenario, sessione, key_points),
+            messages=[
+                {"role": "user", "content": prompt},
+                {"role": "assistant", "content": "{"},
+            ],
         )
-        testo = risposta.content[0].text
+        testo_raw = "{" + risposta.content[0].text
+        parsed = _parse_json(testo_raw)
+        testo = (parsed.get("testo") if parsed else None) or ""
+        if not testo:
+            raise ValueError("campo testo mancante")
     except Exception as e:
         print(f"Errore avvia_scenario: {e}")
-        primo_kp = key_points[0] if key_points else "Come immaginate questo scenario?"
+        descrizione = descrivi_quadrante(
+            scenario["quadrante"],
+            sessione.get("driver1_nome"), sessione.get("driver1_pos"), sessione.get("driver1_neg"),
+            sessione.get("driver2_nome"), sessione.get("driver2_pos"), sessione.get("driver2_neg"),
+        )
         testo = (
             f"Benvenuti allo Scenario {scenario['numero']}!\n\n"
             f"Lavorerete sul quadrante: **{descrizione}**\n\n"

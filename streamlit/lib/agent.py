@@ -315,10 +315,22 @@ def avvia_scenario(scenario, sessione):
     kp_str = ", ".join(key_points) if key_points else "tutti gli aspetti rilevanti"
     primo_kp = key_points[0] if key_points else "il contesto generale"
 
+    descrizione = descrivi_quadrante(
+        scenario["quadrante"],
+        sessione.get("driver1_nome"), sessione.get("driver1_pos"), sessione.get("driver1_neg"),
+        sessione.get("driver2_nome"), sessione.get("driver2_pos"), sessione.get("driver2_neg"),
+    )
+
     prompt = (
         f"Sei nella fase intro. Genera il messaggio di benvenuto per lo Scenario {scenario['numero']}. "
-        f"Presenta il quadrante in modo coinvolgente, accenna che esploreremo insieme: {kp_str}, "
-        f'poi fai subito la prima domanda sul primo key point: "{primo_kp}". '
+        f"Il messaggio deve essere caldo, coinvolgente e ben articolato (almeno 4-5 frasi). "
+        f"Struttura il messaggio così: (1) accogli il partecipante e contestualizza lo scenario '{descrizione}' "
+        f"spiegando brevemente cosa implica questo quadrante in relazione alla domanda di ricerca; "
+        f"(2) accenna — senza elencarli — che esploreremo insieme questi temi: {kp_str}; "
+        f"(3) lancia subito la prima domanda aperta sul primo tema: '{primo_kp}', "
+        f"formulandola in modo specifico rispetto all'orizzonte temporale {sessione['frame_temporale']} "
+        f"e al quadrante assegnato. "
+        f"Tono: colloquiale, empatico, da facilitatore esperto. Nessun elenco. Solo prosa fluente. "
         f"Segui il formato JSON del system prompt."
     )
 
@@ -326,7 +338,7 @@ def avvia_scenario(scenario, sessione):
     try:
         risposta = client.messages.create(
             model="claude-sonnet-4-6",
-            max_tokens=512,
+            max_tokens=1024,
             system=sistema_prompt(scenario, sessione, key_points),
             messages=[
                 {"role": "user", "content": prompt},

@@ -80,9 +80,7 @@ ISTRUZIONI E COMPORTAMENTO:
 - Fai UNA sola domanda o richiesta alla volta, in modo chiaro. Ma non fermarti al primo scambio: il tuo ruolo è spronare il partecipante ad andare in profondità, a portare esempi concreti, a ragionare sulle implicazioni. Una risposta breve o generica va sempre esplorata con una domanda di follow-up.
 - Sii specifico rispetto all'orizzonte temporale {sessione['frame_temporale']}.
 - Termina SEMPRE il campo "testo" con una domanda concreta o una richiesta esplicita all'utente. Non lasciare mai il messaggio senza una call-to-action.
-- PRIMA di avanzare allo step successivo (ovvero prima di cambiare il campo "nuovo_step"), quando pensi di avere raccolto abbastanza materiale, DEVI CHIEDERE ESPLICITAMENTE all'utente: "Posso procedere [con la sintesi / al prossimo step] o vuoi aggiungere altro?".
-- SOLO se l'utente ti dà la conferma di procedere, al turno successivo imposterai "nuovo_step" al nome dello step seguente. Finché non hai il via libera esplicito, mantieni "nuovo_step" a null e continua la fase corrente.
-- Se l'utente scrive "[continua]" o ti chiede esplicitamente di andare avanti, puoi avanzare allo step successivo senza ulteriori conferme.
+- Quando hai raccolto materiale sufficiente su uno step, avanza naturalmente al successivo: segnala la transizione con una frase di raccordo nel testo (es. "Bene, costruiamo ora la narrativa dello scenario..." oppure "Passiamo al titolo...") e imposta "nuovo_step" al nome dello step successivo. Non attendere una conferma esplicita dell'utente: sei tu il facilitatore e guidi il ritmo. Se il partecipante vuole tornare su qualcosa di precedente, ascolta e poi riprendi il filo.
 
 REGOLE PER aggiornamenti (FONDAMENTALE - segui sempre):
 - Dato che sei in un'App, l'interfaccia utente mostra i dati in tempo reale SOLO SE fornisci l'oggetto "aggiornamenti" completo ad OGNI singolo messaggio.
@@ -260,6 +258,24 @@ def invia_messaggio(scenario, sessione, testo_utente):
         # corretti con valori errati (es. modello mette testo discorsivo in narrativa
         # durante lo step titolo).
         step = scenario.get("step_corrente", "")
+
+        # Fallback keyword-based step advancement: se il modello non ha impostato
+        # nuovo_step nel JSON, controlla se la domanda finale del messaggio segnala
+        # una transizione (es. "parliamo delle minacce?")
+        if not nuovo_step:
+            tl = testo_risposta.lower()
+            last_part = tl[len(tl) // 2:]
+            _KEYWORD_TRIGGERS = [
+                ("key_points", ["narrativa", "costruiamo", "proviamo a costruire", "passiamo alla sintesi"], "narrativa"),
+                ("narrativa",  ["titolo", "come lo chiameresti", "nome dello scenario", "come chiamereste"], "titolo"),
+                ("titolo",     ["minacce", "minaccia", "rischi", "pericoli"], "minacce"),
+                ("minacce",    ["opportunità", "opportunita", "possibilità positive", "potenzialità"], "opportunita"),
+            ]
+            for _cur, _kws, _next in _KEYWORD_TRIGGERS:
+                if step == _cur and any(kw in last_part for kw in _kws):
+                    nuovo_step = _next
+                    break
+
         updates = {}
         if nuovo_step and nuovo_step in STEP_ORDINE:
             updates["step_corrente"] = nuovo_step

@@ -25,7 +25,11 @@ if IS_POSTGRES:
 
 def get_conn():
     if IS_POSTGRES:
-        conn = psycopg2.connect(DB_URL, cursor_factory=RealDictCursor)
+        url = DB_URL
+        if "sslmode" not in url:
+            sep = "&" if "?" in url else "?"
+            url = url + sep + "sslmode=require"
+        conn = psycopg2.connect(url, cursor_factory=RealDictCursor)
         conn.autocommit = True
         return conn
     else:

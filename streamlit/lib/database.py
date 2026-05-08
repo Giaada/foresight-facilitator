@@ -373,6 +373,7 @@ def aggiorna_partecipante(pid, **kwargs):
     values = list(kwargs.values()) + [pid]
     exec_query(f"UPDATE partecipante SET {fields} WHERE id = ?", values)
     get_partecipanti.clear()
+    get_scenario_individuale.clear()
 
 # ── Voti ──────────────────────────────────────────────────
 
@@ -452,7 +453,8 @@ def _parse_scenario(d):
     for field in ["minacce", "opportunita", "minacce_finale", "opportunita_finale"]:
         try:
             val = d.get(field)
-            d[field] = json.loads(val) if val else []
+            parsed = json.loads(val) if val else []
+            d[field] = parsed if isinstance(parsed, list) else []
         except Exception:
             d[field] = []
 

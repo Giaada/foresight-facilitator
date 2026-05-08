@@ -174,13 +174,13 @@ if is_group_phase:
             n_fin = sc_live.get("narrativa_finale") or sc_live.get("narrativa", "")
             
             m_fin_list = sc_live.get("minacce_finale")
-            if m_fin_list is None or not isinstance(m_fin_list, list):
-                m_fin_list = sc_live.get("minacce", [])
+            if not isinstance(m_fin_list, list) or not m_fin_list:
+                m_fin_list = sc_live.get("minacce") or []
             m_fin = "\n".join(m_fin_list)
-            
+
             o_fin_list = sc_live.get("opportunita_finale")
-            if o_fin_list is None or not isinstance(o_fin_list, list):
-                o_fin_list = sc_live.get("opportunita", [])
+            if not isinstance(o_fin_list, list) or not o_fin_list:
+                o_fin_list = sc_live.get("opportunita") or []
             o_fin = "\n".join(o_fin_list)
 
             if locked_by == partecipante_id:

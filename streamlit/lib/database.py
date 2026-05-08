@@ -30,6 +30,7 @@ def get_conn():
             sep = "&" if "?" in url else "?"
             url = url + sep + "sslmode=require"
         conn = psycopg2.connect(url, cursor_factory=RealDictCursor)
+        conn.set_client_encoding('UTF8')
         conn.autocommit = True
         return conn
     else:

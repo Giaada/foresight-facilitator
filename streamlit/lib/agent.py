@@ -453,7 +453,7 @@ Rispondi SOLO con un JSON con la seguente struttura:
                 "punti_comune": dati.get("punti_comune", []),
                 "divergenze": dati.get("divergenze", [])
             },
-            step_corrente="intro"
+            step_corrente="concluso"
         )
     except Exception as e:
         aggiorna_scenario(

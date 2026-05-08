@@ -430,6 +430,21 @@ def crea_scenari(sessione_id):
     get_scenario_individuale.clear()
     get_scenario.clear()
 
+def aggiungi_partecipante_a_gruppo(sessione_id, partecipante_id, gruppo_numero):
+    """Assegna un partecipante a un gruppo e crea il suo scenario individuale
+    senza toccare gli scenari già esistenti degli altri partecipanti."""
+    quad_map = {1: "-+", 2: "++", 3: "+-", 4: "--"}
+    aggiorna_partecipante(partecipante_id, gruppo_numero=gruppo_numero)
+    q = quad_map.get(gruppo_numero)
+    if q:
+        exec_query(
+            "INSERT INTO scenario (sessione_id, numero, quadrante, partecipante_id) VALUES (?, ?, ?, ?)",
+            (sessione_id, gruppo_numero, q, partecipante_id)
+        )
+    get_scenari_individuali.clear()
+    get_scenario_individuale.clear()
+    get_partecipanti.clear()
+
 def _parse_scenario(d):
     if not d:
         return None

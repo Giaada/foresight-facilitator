@@ -8,7 +8,8 @@ from lib.auth import check_facilitatore
 from lib.database import (
     get_sessione_by_id, aggiorna_sessione,
     get_scenari, get_scenario, aggiorna_scenario,
-    get_scenari_individuali, get_partecipanti
+    get_scenari_individuali, get_partecipanti,
+    aggiungi_partecipante_a_gruppo
 )
 from lib.agent import unisci_scenari_gruppo
 from lib.quadrant_ui import draw_quadrant_matrix
@@ -83,6 +84,38 @@ par_map = {p["id"]: p["nome"] for p in partecipanti}
 
 if not scenari_gruppo:
     st.stop()
+
+# ── Partecipanti non assegnati (aggiunti a sessione già avviata) ──────
+if stato == "scenario_planning":
+    non_assegnati = [p for p in partecipanti if not p.get("gruppo_numero")]
+    if non_assegnati:
+        st.divider()
+        with st.expander(f"⚠️ {len(non_assegnati)} partecipante/i senza gruppo — assegna ora", expanded=True):
+            st.caption("Questi partecipanti si sono connessi dopo l'avvio. Assegnali a un gruppo per creare il loro scenario individuale senza interrompere il lavoro degli altri.")
+            GRUPPI_LABEL = {1: "Gruppo 1 (-+)", 2: "Gruppo 2 (++)", 3: "Gruppo 3 (+-)", 4: "Gruppo 4 (--)"}
+            nuove_assegnazioni = {}
+            cols = st.columns(min(len(non_assegnati), 3))
+            for i, p in enumerate(non_assegnati):
+                with cols[i % 3]:
+                    with st.container(border=True):
+                        st.markdown(f"**{p['nome']}**")
+                        sel = st.selectbox(
+                            "Gruppo",
+                            options=[0, 1, 2, 3, 4],
+                            format_func=lambda x: "Non assegnato" if x == 0 else GRUPPI_LABEL[x],
+                            key=f"na_gruppo_{p['id']}",
+                            label_visibility="collapsed",
+                        )
+                        nuove_assegnazioni[p["id"]] = sel
+            if st.button("💾 Assegna e crea scenari", type="primary", use_container_width=True, key="btn_assegna_tardivi"):
+                assegnati = {pid: g for pid, g in nuove_assegnazioni.items() if g != 0}
+                if not assegnati:
+                    st.error("Seleziona almeno un gruppo.")
+                else:
+                    for pid, gnum in assegnati.items():
+                        aggiungi_partecipante_a_gruppo(sid, pid, gnum)
+                    st.success(f"✅ {len(assegnati)} partecipante/i aggiunti ai rispettivi gruppi.")
+                    st.rerun()
 
 st.divider()
 

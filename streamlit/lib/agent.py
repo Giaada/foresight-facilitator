@@ -153,10 +153,6 @@ def _build_history(messaggi_db, testo_utente):
     if msgs and msgs[0]["role"] == "assistant":
         msgs = [{"role": "user", "content": "[Sessione avviata]"}] + msgs
 
-    # Prefill: forza il modello a iniziare la risposta con '{',
-    # eliminando quasi completamente i casi di output non-JSON
-    msgs.append({"role": "assistant", "content": "{"})
-
     return msgs
 
 
@@ -206,7 +202,7 @@ def invia_messaggio(scenario, sessione, testo_utente):
             system=sistema_prompt(scenario, sessione, key_points),
             messages=history,
         )
-        testo_raw = "{" + risposta.content[0].text  # reintegra il prefill '{'
+        testo_raw = risposta.content[0].text
 
         testo_risposta = testo_raw
         nuovo_step = None
@@ -342,10 +338,9 @@ def avvia_scenario(scenario, sessione):
             system=sistema_prompt(scenario, sessione, key_points),
             messages=[
                 {"role": "user", "content": prompt},
-                {"role": "assistant", "content": "{"},
             ],
         )
-        testo_raw = "{" + risposta.content[0].text
+        testo_raw = risposta.content[0].text
         parsed = _parse_json(testo_raw)
         testo = (parsed.get("testo") if parsed else None) or ""
         if not testo:

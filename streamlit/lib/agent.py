@@ -63,8 +63,8 @@ FLUSSO DA SEGUIRE (lo step corrente è indicato alla fine di questo prompt):
 2. key_points → esplora ogni key point ({kp_list}) uno alla volta in modo conversazionale; per ogni key point fai una domanda aperta e poi approfondisci con 1-2 domande di follow-up per far emergere ragionamenti concreti, esempi, implicazioni; non esaurire il tema in un solo scambio ma non dilungarti oltre 3 turni per key point; quando hai materiale sufficiente su un tema passa naturalmente al successivo senza annunciarlo; accumula le risposte in key_points_data
 3. narrativa → scrivi nel campo "testo" un messaggio discorsivo che: (a) introduce brevemente cosa stai per fare, (b) riporta la narrativa completa dello scenario (3-5 frasi di prosa continua, in prima persona plurale "In questo scenario..."), (c) chiede al partecipante se la narrativa lo convince o vuole modificare qualcosa. La stessa narrativa va anche in aggiornamenti.narrativa. NON usare elenchi o intestazioni nella narrativa: solo paragrafo continuo.
 4. titolo → chiedi un titolo; se non fornito, suggerisci 3 opzioni
-5. minacce → chiedi al partecipante quali minacce e rischi vede in questo scenario; ascolta, fai domande di chiarimento se serve, ma NON suggerire minacce tu stesso; salva in aggiornamenti.minacce SOLO le minacce esplicitamente enunciate dal partecipante
-6. opportunita → chiedi al partecipante quali opportunità vede in questo scenario; ascolta, fai domande di chiarimento se serve, ma NON suggerire opportunità tu stesso; salva in aggiornamenti.opportunita SOLO le opportunità esplicitamente enunciate dal partecipante
+5. minacce → chiedi al partecipante quali minacce e rischi vede in questo scenario; ascolta, fai domande di chiarimento se serve, ma NON suggerire minacce tu stesso; REGOLA CRITICA: in OGNI tuo messaggio di questo step includi in aggiornamenti.minacce l'elenco COMPLETO e AGGIORNATO di tutte le minacce emerse finora, anche durante le domande di follow-up; non lasciare mai aggiornamenti.minacce vuoto se hai già raccolto minacce
+6. opportunita → chiedi al partecipante quali opportunità vede in questo scenario; ascolta, fai domande di chiarimento se serve, ma NON suggerire opportunità tu stesso; REGOLA CRITICA: in OGNI tuo messaggio di questo step includi in aggiornamenti.opportunita l'elenco COMPLETO e AGGIORNATO di tutte le opportunità emerse finora; includi anche aggiornamenti.minacce con i valori già salvati in precedenza (non lasciarli null)
 7. concluso → raccordi e sintetizzi tutte le idee emerse nel dialogo: fai un riepilogo narrativo completo (titolo, narrativa, minacce, opportunità), evidenzia i fili conduttori e le tensioni più interessanti che sono emersi nella conversazione, poi saluta calorosamente
 
 COERENZA CON LO SCENARIO (REGOLA PRIORITARIA):
@@ -283,10 +283,14 @@ def invia_messaggio(scenario, sessione, testo_utente):
             updates["narrativa"] = agg["narrativa"]
         if agg.get("titolo") and step == "titolo":
             updates["titolo"] = agg["titolo"]
-        if agg.get("minacce") and step == "minacce":
-            updates["minacce"] = agg["minacce"]
-        if agg.get("opportunita") and step == "opportunita":
-            updates["opportunita"] = agg["opportunita"]
+        if agg.get("minacce"):
+            # salva durante lo step minacce, oppure come fallback durante opportunita/concluso
+            # se le minacce non sono ancora state salvate nel DB
+            if step == "minacce" or (step in ("opportunita", "concluso") and not scenario.get("minacce")):
+                updates["minacce"] = agg["minacce"]
+        if agg.get("opportunita"):
+            if step == "opportunita" or (step == "concluso" and not scenario.get("opportunita")):
+                updates["opportunita"] = agg["opportunita"]
         if agg.get("key_points_data") and step == "key_points":
             kpd = scenario.get("key_points_data", {}) or {}
             kpd.update(agg["key_points_data"])
